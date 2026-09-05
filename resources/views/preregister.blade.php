@@ -58,6 +58,9 @@
             font-size: 1.35rem;
             font-weight: 800;
             letter-spacing: -0.03em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
 
         .logo span { color: var(--gold); }
@@ -286,6 +289,10 @@
             line-height: 1.5;
         }
 
+        .logo-img {
+            max-width: 60px;
+        }
+
         footer .copyright { font-size: 0.75rem; color: var(--slate); }
 
         @media (max-width: 640px) {
@@ -298,7 +305,10 @@
 <body>
     <nav>
         <div class="container nav-inner">
-            <a href="{{ url('/') }}" class="logo">SA<span>TU</span>RN</a>
+            <a href="{{ url('/') }}" class="logo">
+                <img src="{{ asset('images/v5yuA.png') }}" alt="Saturn Logo" class="logo-img">
+                <img src="{{ asset('images/text.svg') }}" alt="" style="max-width: 150px;">
+            </a>
             <a href="{{ url('/') }}" class="back-link">&larr; Back to site</a>
         </div>
     </nav>
@@ -306,8 +316,8 @@
     <main>
         <div class="container">
             <div class="hero">
-                <div class="hero-badge">Not yet open to investors</div>
-                <h1>Get notified the day Saturn opens.</h1>
+                <div style="height: 70px;"></div>
+                <h1>Get notified the day <span style="color: var(--gold);">Saturn</span> opens.</h1>
                 <p class="hero-lead">
                     Leave your email and we'll send you one message when registrations open — nothing before that.
                 </p>

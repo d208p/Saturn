@@ -2,6 +2,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\RegisteredUserController;
+use App\Http\Controllers\PreregisterController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -10,6 +11,9 @@ Route::get('/', function () {
 Route::get('/preregister', function () {
     return view('preregister');
 });
+
+Route::get('/preregister', [PreregisterController::class, 'create'])->name('preregister');
+Route::post('/preregister', [PreregisterController::class, 'store'])->name('preregister.store');
 
 Route::get('/login', function () {
     return view('auth.login');

@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Welcome to Saturn</title>
+    <link rel="icon" type="image/png" href="{{ asset('images/v5yuA.png') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -1239,7 +1240,7 @@
         <div class="container">
             <h2>Own something that does something.</h2>
             <p>Saturn is being built as a transparent platform for structured investment in productive real-world assets. Join early and follow the platform as the first opportunities take shape.</p>
-            <a href="#" class="btn btn-primary">Join Saturn</a>
+            <a href="/preregister" class="btn btn-primary">Join Saturn</a>
         </div>
     </section>
 
