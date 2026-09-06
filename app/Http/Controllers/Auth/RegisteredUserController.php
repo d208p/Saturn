@@ -5,7 +5,8 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Auth\Events\Registered;
-use Illuminate\Http\RedirectResponse; // Import RedirectResponse
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -19,7 +20,7 @@ class RegisteredUserController extends Controller
      *
      * @throws ValidationException
      */
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request): JsonResponse|RedirectResponse
     {
         $request->validate([
             'name' => ['required', 'string', 'max:255'],
@@ -35,9 +36,20 @@ class RegisteredUserController extends Controller
 
         event(new Registered($user));
 
+        // 1. If request comes from Flutter / API (expects JSON)
+        if ($request->wantsJson()) {
+            // Create a Sanctum token so the mobile app can log in immediately
+            $token = $user->createToken('auth_token')->plainTextToken;
+
+            return response()->json([
+                'user'  => $user,
+                'token' => $token,
+            ], 201);
+        }
+
+        // 2. Standard Web Browser session authentication
         Auth::login($user);
 
-        // Redirect to dashboard after registering
         return redirect()->route('dashboard');
     }
 }
