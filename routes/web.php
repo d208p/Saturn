@@ -28,9 +28,18 @@ Route::get('/register', function () {
 Route::post('/register', [RegisteredUserController::class, 'store']);
 
 Route::get('/dashboard', function () {
-    return view('auth.dashboard');
+    return view('dashboard.dashboard');
 })->middleware(['auth'])->name('dashboard');
 
 Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])
     ->middleware('auth')
     ->name('logout');
+
+Route::middleware('auth')->group(function () {
+    Route::view('/portfolio', 'dashboard.portfolio');
+    Route::view('/market', 'dashboard.market');
+    Route::view('/asset', 'dashboard.asset');
+    Route::view('/trade', 'dashboard.trade');
+    Route::view('/income', 'dashboard.income');
+    Route::view('/activity', 'dashboard.activity');
+});
