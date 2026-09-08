@@ -13,10 +13,14 @@
             {{ $greeting }}, {{ $firstName }}
         </div>
         <div style="display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap;">
-            <div style="font-size: 2.4rem; font-weight: 800; letter-spacing: -0.02em;">€42,850.00</div>
-            <span class="badge positive">
-                <svg class="icon" style="width:13px;height:13px;"><use href="#icon-arrow-up-right"/></svg>
-                +€4,280.00 · +11.1%
+            <div style="font-size: 2.4rem; font-weight: 800; letter-spacing: -0.02em;">
+                €{{ number_format($totalPortfolioValue, 2) }}
+            </div>
+            <span class="badge {{ $unrealizedGain >= 0 ? 'positive' : 'negative' }}">
+                <svg class="icon" style="width:13px;height:13px;">
+                    <use href="{{ $unrealizedGain >= 0 ? '#icon-arrow-up-right' : '#icon-arrow-down-right' }}"/>
+                </svg>
+                {{ $unrealizedGain >= 0 ? '+' : '' }}€{{ number_format($unrealizedGain, 2) }}
             </span>
         </div>
         <div class="muted" style="font-size: 0.85rem; margin-top: 4px;">Total portfolio value</div>
@@ -29,7 +33,7 @@
                 <div class="section-title" style="margin-bottom: 2px;">Portfolio performance</div>
                 <div class="muted" style="font-size: 0.82rem;">Value over time, including distributions</div>
             </div>
-            <div style="display: flex; gap: 6px;">
+            <div style="display: flex; gap: 6px;" id="chart-controls">
                 <button class="chip" data-range="1m">1M</button>
                 <button class="chip" data-range="6m">6M</button>
                 <button class="chip active" data-range="1y">1Y</button>
@@ -45,17 +49,17 @@
                 </linearGradient>
             </defs>
 
-            <path data-range="1m" fill="url(#chartFill)" stroke="none" d="M0,150 L67,145 L134,155 L200,140 L267,130 L333,135 L400,120 L467,125 L533,110 L600,100 L600,220 L0,220 Z"/>
-            <path data-range="1m" fill="none" stroke="#C6A15B" stroke-width="2.5" d="M0,150 L67,145 L134,155 L200,140 L267,130 L333,135 L400,120 L467,125 L533,110 L600,100"/>
+            <path id="path-1m-fill" data-range="1m" style="display:none;" fill="url(#chartFill)" stroke="none" d="M0,150 L67,145 L134,155 L200,140 L267,130 L333,135 L400,120 L467,125 L533,110 L600,100 L600,220 L0,220 Z"/>
+            <path id="path-1m-stroke" data-range="1m" style="display:none;" fill="none" stroke="#C6A15B" stroke-width="2.5" d="M0,150 L67,145 L134,155 L200,140 L267,130 L333,135 L400,120 L467,125 L533,110 L600,100"/>
 
-            <path data-range="6m" fill="url(#chartFill)" stroke="none" d="M0,190 L67,170 L134,180 L200,150 L267,160 L333,120 L400,140 L467,100 L533,110 L600,80 L600,220 L0,220 Z"/>
-            <path data-range="6m" fill="none" stroke="#C6A15B" stroke-width="2.5" d="M0,190 L67,170 L134,180 L200,150 L267,160 L333,120 L400,140 L467,100 L533,110 L600,80"/>
+            <path id="path-6m-fill" data-range="6m" style="display:none;" fill="url(#chartFill)" stroke="none" d="M0,190 L67,170 L134,180 L200,150 L267,160 L333,120 L400,140 L467,100 L533,110 L600,80 L600,220 L0,220 Z"/>
+            <path id="path-6m-stroke" data-range="6m" style="display:none;" fill="none" stroke="#C6A15B" stroke-width="2.5" d="M0,190 L67,170 L134,180 L200,150 L267,160 L333,120 L400,140 L467,100 L533,110 L600,80"/>
 
-            <path data-range="1y" fill="url(#chartFill)" stroke="none" d="M0,200 L67,185 L134,190 L200,160 L267,170 L333,130 L400,150 L467,90 L533,110 L600,60 L600,220 L0,220 Z"/>
-            <path data-range="1y" fill="none" stroke="#C6A15B" stroke-width="2.5" d="M0,200 L67,185 L134,190 L200,160 L267,170 L333,130 L400,150 L467,90 L533,110 L600,60"/>
+            <path id="path-1y-fill" data-range="1y" fill="url(#chartFill)" stroke="none" d="M0,200 L67,185 L134,190 L200,160 L267,170 L333,130 L400,150 L467,90 L533,110 L600,60 L600,220 L0,220 Z"/>
+            <path id="path-1y-stroke" data-range="1y" fill="none" stroke="#C6A15B" stroke-width="2.5" d="M0,200 L67,185 L134,190 L200,160 L267,170 L333,130 L400,150 L467,90 L533,110 L600,60"/>
 
-            <path data-range="all" fill="url(#chartFill)" stroke="none" d="M0,205 L67,195 L134,200 L200,175 L267,180 L333,140 L400,155 L467,95 L533,120 L600,50 L600,220 L0,220 Z"/>
-            <path data-range="all" fill="none" stroke="#C6A15B" stroke-width="2.5" d="M0,205 L67,195 L134,200 L200,175 L267,180 L333,140 L400,155 L467,95 L533,120 L600,50"/>
+            <path id="path-all-fill" data-range="all" style="display:none;" fill="url(#chartFill)" stroke="none" d="M0,205 L67,195 L134,200 L200,175 L267,180 L333,140 L400,155 L467,95 L533,120 L600,50 L600,220 L0,220 Z"/>
+            <path id="path-all-stroke" data-range="all" style="display:none;" fill="none" stroke="#C6A15B" stroke-width="2.5" d="M0,205 L67,195 L134,200 L200,175 L267,180 L333,140 L400,155 L467,95 L533,120 L600,50"/>
         </svg>
     </div>
 
@@ -63,27 +67,32 @@
     <div class="grid grid-3" style="margin-bottom: 24px;">
         <div class="card">
             <div class="stat-label">Invested</div>
-            <div class="stat-value">€38,200</div>
+            <div class="stat-value">€{{ number_format($investedValue, 2) }}</div>
         </div>
         <div class="card">
             <div class="stat-label">Available cash</div>
-            <div class="stat-value">€4,650</div>
+            <div class="stat-value">€{{ number_format($availableCash, 2) }}</div>
         </div>
         <div class="card">
             <div class="stat-label">Unrealized gain</div>
-            <div class="stat-value positive">+€3,064</div>
+            <div class="stat-value {{ $unrealizedGain >= 0 ? 'positive' : 'negative' }}">
+                {{ $unrealizedGain >= 0 ? '+' : '' }}€{{ number_format($unrealizedGain, 2) }}
+            </div>
         </div>
         <div class="card">
             <div class="stat-label">Income received</div>
-            <div class="stat-value">€1,216.70</div>
+            <div class="stat-value">€{{ number_format($incomeReceived, 2) }}</div>
         </div>
         <div class="card">
             <div class="stat-label">Portfolio yield</div>
-            <div class="stat-value">6.8%</div>
+            <div class="stat-value">{{ number_format($portfolioYield, 1) }}%</div>
         </div>
         <div class="card">
             <div class="stat-label">Next distribution</div>
-            <div class="stat-value" style="font-size: 1.05rem;">€184.20 <span class="muted" style="font-size: 0.78rem; font-weight: 500;">· Oct 1</span></div>
+            <div class="stat-value" style="font-size: 1.05rem;">
+                €{{ number_format($thisMonthIncome, 2) }} 
+                <span class="muted" style="font-size: 0.78rem; font-weight: 500;">· Upcoming</span>
+            </div>
         </div>
     </div>
 
@@ -94,27 +103,31 @@
                 <div class="section-title">Your holdings</div>
                 <a href="/portfolio#holdings" class="link-muted">View all <svg class="icon" style="width:14px;height:14px;"><use href="#icon-chevron-right"/></svg></a>
             </div>
-            <div class="list-row">
-                <div>
-                    <div class="primary">Bucharest Hotel</div>
-                    <div class="secondary">Hospitality · +14.2%</div>
+            
+            @forelse($holdings->take(3) as $holding)
+                @php
+                    $value = $holding->shares_owned * $holding->asset->share_price;
+                    $gainPercent = $holding->total_invested > 0 
+                        ? (($value - $holding->total_invested) / $holding->total_invested) * 100 
+                        : 0;
+                @endphp
+                <div class="list-row">
+                    <div>
+                        <div class="primary">{{ $holding->asset->title }}</div>
+                        <div class="secondary">
+                            {{ $holding->asset->category ?? 'Asset' }} · 
+                            <span class="{{ $gainPercent >= 0 ? 'positive' : 'negative' }}">
+                                {{ $gainPercent >= 0 ? '+' : '' }}{{ number_format($gainPercent, 1) }}%
+                            </span>
+                        </div>
+                    </div>
+                    <div class="value">€{{ number_format($value, 2) }}</div>
                 </div>
-                <div class="value">€12,400</div>
-            </div>
-            <div class="list-row">
-                <div>
-                    <div class="primary">Solar Farm #12</div>
-                    <div class="secondary">Energy · +8.7%</div>
+            @empty
+                <div class="muted" style="padding: 12px 0; font-size: 0.9rem;">
+                    No current holdings. Explore the market to start investing.
                 </div>
-                <div class="value">€9,800</div>
-            </div>
-            <div class="list-row">
-                <div>
-                    <div class="primary">Tuscany Vineyard</div>
-                    <div class="secondary">Agriculture · +17.3%</div>
-                </div>
-                <div class="value">€7,200</div>
-            </div>
+            @endforelse
         </div>
 
         <!-- Income + Market teaser -->
@@ -127,11 +140,11 @@
                 <div class="grid grid-2" style="gap: 16px;">
                     <div>
                         <div class="stat-label">This month</div>
-                        <div class="stat-value">€223.40</div>
+                        <div class="stat-value">€{{ number_format($thisMonthIncome, 2) }}</div>
                     </div>
                     <div>
-                        <div class="stat-label">2026 total</div>
-                        <div class="stat-value">€1,216.70</div>
+                        <div class="stat-label">{{ date('Y') }} total</div>
+                        <div class="stat-value">€{{ number_format($incomeReceived, 2) }}</div>
                     </div>
                 </div>
             </div>
@@ -139,10 +152,32 @@
             <div class="card">
                 <div class="section-title">Market</div>
                 <p class="muted" style="font-size: 0.88rem; margin-bottom: 16px;">
-                    3 new opportunities · 12 positions available on the secondary market.
+                    {{ $activeOpportunitiesCount }} new opportunities · {{ $secondaryPositionsCount }} positions available on the secondary market.
                 </p>
-                <a href="/market#secondary" class="btn btn-gold btn-block">Explore market</a>
+                <a href="{{ route('market')}}" class="btn btn-gold btn-block">Explore market</a>
             </div>
         </div>
     </div>
 @endsection
+
+@push('scripts')
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const buttons = document.querySelectorAll('#chart-controls .chip');
+        const paths = document.querySelectorAll('.chart-svg path');
+
+        buttons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const range = btn.dataset.range;
+
+                buttons.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+
+                paths.forEach(p => {
+                    p.style.display = p.dataset.range === range ? 'block' : 'none';
+                });
+            });
+        });
+    });
+</script>
+@endpush

@@ -4,7 +4,7 @@
 
 @section('content')
     <div class="tabs" data-panels="#activity-panels">
-        <button class="tab-btn" data-tab="transactions">Transactions</button>
+        <button class="tab-btn active" data-tab="transactions">Transactions</button>
         <button class="tab-btn" data-tab="orders">Orders</button>
     </div>
 
@@ -13,56 +13,43 @@
         <!-- Transactions -->
         <div class="tab-panel" id="transactions">
             <div class="card">
-                <div class="list-row">
-                    <div style="display: flex; align-items: center; gap: 12px;">
-                        <span class="badge negative">BUY</span>
-                        <div>
-                            <div class="primary">Solar Farm #12</div>
-                            <div class="secondary">Sep 4, 2026 · 200 units</div>
+                @forelse($transactions as $tx)
+                    @php
+                        $isPositive = in_array(strtolower($tx->type), ['sell', 'distribution', 'deposit']);
+                        $badgeClass = match(strtolower($tx->type)) {
+                            'buy' => 'negative',
+                            'sell' => 'positive',
+                            'distribution' => 'positive',
+                            'deposit' => 'neutral',
+                            default => 'muted'
+                        };
+                    @endphp
+                    <div class="list-row">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <span class="badge {{ $badgeClass }}">{{ strtoupper($tx->type) }}</span>
+                            <div>
+                                <div class="primary">{{ $tx->asset->title ?? $tx->description ?? 'Transaction' }}</div>
+                                <div class="secondary">
+                                    {{ $tx->created_at->format('M j, Y') }}
+                                    @if($tx->units)
+                                        · {{ $tx->units }} units
+                                    @endif
+                                </div>
+                            </div>
+                        </div>
+                        <div class="value {{ $isPositive ? 'positive' : 'negative' }}">
+                            {{ $isPositive ? '+' : '-' }}€{{ number_format(abs($tx->amount), 2) }}
                         </div>
                     </div>
-                    <div class="value negative">-€22,480</div>
-                </div>
-                <div class="list-row">
-                    <div style="display: flex; align-items: center; gap: 12px;">
-                        <span class="badge positive">DISTRIBUTION</span>
-                        <div>
-                            <div class="primary">Bucharest Hotel</div>
-                            <div class="secondary">Aug 28, 2026</div>
-                        </div>
+                @empty
+                    <div style="padding: 20px; text-align: center;" class="muted">No recent transactions found.</div>
+                @endforelse
+
+                @if($transactions->hasPages())
+                    <div style="padding: 16px;">
+                        {{ $transactions->links() }}
                     </div>
-                    <div class="value positive">+€184.20</div>
-                </div>
-                <div class="list-row">
-                    <div style="display: flex; align-items: center; gap: 12px;">
-                        <span class="badge positive">SELL</span>
-                        <div>
-                            <div class="primary">Tuscany Vineyard</div>
-                            <div class="secondary">Aug 17, 2026 · 100 units</div>
-                        </div>
-                    </div>
-                    <div class="value positive">+€1,126</div>
-                </div>
-                <div class="list-row">
-                    <div style="display: flex; align-items: center; gap: 12px;">
-                        <span class="badge muted">FEE</span>
-                        <div>
-                            <div class="primary">Platform fee</div>
-                            <div class="secondary">Aug 17, 2026</div>
-                        </div>
-                    </div>
-                    <div class="value negative">-€8.10</div>
-                </div>
-                <div class="list-row">
-                    <div style="display: flex; align-items: center; gap: 12px;">
-                        <span class="badge neutral">DEPOSIT</span>
-                        <div>
-                            <div class="primary">Bank transfer</div>
-                            <div class="secondary">Aug 2, 2026</div>
-                        </div>
-                    </div>
-                    <div class="value positive">+€5,000</div>
-                </div>
+                @endif
             </div>
         </div>
 
@@ -70,32 +57,51 @@
         <div class="tab-panel" id="orders">
             <div class="card">
                 <table>
-                    <thead><tr><th>Asset</th><th>Side</th><th>Units</th><th>Price</th><th>Status</th><th></th></tr></thead>
+                    <thead>
+                        <tr>
+                            <th>Asset</th>
+                            <th>Side</th>
+                            <th>Units</th>
+                            <th>Price</th>
+                            <th>Status</th>
+                            <th></th>
+                        </tr>
+                    </thead>
                     <tbody>
-                        <tr>
-                            <td style="font-weight: 700;">Tuscany Vineyard</td>
-                            <td><span class="badge positive">SELL</span></td>
-                            <td>300</td>
-                            <td>€112.40</td>
-                            <td><span class="badge positive">Active</span></td>
-                            <td><button class="btn btn-danger-outline btn-sm">Cancel</button></td>
-                        </tr>
-                        <tr>
-                            <td style="font-weight: 700;">Solar Farm #12</td>
-                            <td><span class="badge negative">BUY</span></td>
-                            <td>150</td>
-                            <td>€110.00</td>
-                            <td><span class="badge muted">Filled</span></td>
-                            <td class="muted" style="font-size: 0.82rem;">Sep 3</td>
-                        </tr>
-                        <tr>
-                            <td style="font-weight: 700;">Bucharest Hotel</td>
-                            <td><span class="badge negative">BUY</span></td>
-                            <td>50</td>
-                            <td>€10.20</td>
-                            <td><span class="badge muted">Cancelled</span></td>
-                            <td class="muted" style="font-size: 0.82rem;">Aug 29</td>
-                        </tr>
+                        @forelse($orders as $order)
+                            <tr>
+                                <td style="font-weight: 700;">{{ $order->asset->title ?? 'N/A' }}</td>
+                                <td>
+                                    <span class="badge {{ strtolower($order->type) === 'buy' ? 'negative' : 'positive' }}">
+                                        {{ strtoupper($order->type) }}
+                                    </span>
+                                </td>
+                                <td>{{ $order->units }}</td>
+                                <td>€{{ number_format($order->price_per_unit, 2) }}</td>
+                                <td>
+                                    <span class="badge {{ $order->status === 'active' ? 'positive' : 'muted' }}">
+                                        {{ ucfirst($order->status) }}
+                                    </span>
+                                </td>
+                                <td>
+                                    @if($order->status === 'active')
+                                        <form action="{{ route('orders.cancel', $order->id) }}" method="POST" style="display:inline;">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="btn btn-danger-outline btn-sm">Cancel</button>
+                                        </form>
+                                    @else
+                                        <span class="muted" style="font-size: 0.82rem;">{{ $order->updated_at->format('M j') }}</span>
+                                    @endif
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="6" class="muted" style="text-align: center; padding: 20px;">
+                                    No active or past orders found.
+                                </td>
+                            </tr>
+                        @endforelse
                     </tbody>
                 </table>
             </div>

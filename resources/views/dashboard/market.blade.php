@@ -13,7 +13,7 @@
 
 @section('content')
     <div class="tabs" data-panels="#market-panels">
-        <button class="tab-btn" data-tab="discover">Discover</button>
+        <button class="tab-btn active" data-tab="discover">Discover</button>
         <button class="tab-btn" data-tab="new-projects">New Projects</button>
         <button class="tab-btn" data-tab="secondary">Secondary Market</button>
         <button class="tab-btn" data-tab="watchlist">Watchlist</button>
@@ -41,202 +41,97 @@
                     <div style="font-weight: 700; margin: 4px 0 6px;">Vineyards & orchards</div>
                     <p class="muted" style="font-size: 0.85rem;">Land-backed assets with seasonal, harvest-linked cash flow.</p>
                 </div>
-                <div class="card trend-card">
-                    <div class="stat-label">Development</div>
-                    <div style="font-weight: 700; margin: 4px 0 6px;">Ground-up projects</div>
-                    <p class="muted" style="font-size: 0.85rem;">Higher-risk, higher-upside projects still under construction.</p>
-                </div>
-                <div class="card trend-card">
-                    <div class="stat-label">Infrastructure</div>
-                    <div style="font-weight: 700; margin: 4px 0 6px;">Logistics & utilities</div>
-                    <p class="muted" style="font-size: 0.85rem;">Essential-service assets, typically lower volatility.</p>
-                </div>
-                <div class="card trend-card" style="display: flex; flex-direction: column; justify-content: center; align-items: flex-start;">
-                    <p class="muted" style="font-size: 0.85rem; margin-bottom: 12px;">Not sure where to start?</p>
-                    <a href="#secondary" class="btn btn-outline btn-sm">Browse all listings</a>
-                </div>
             </div>
         </div>
 
-        <!-- New Projects (V1 style: fundraising) -->
+        <!-- New Projects -->
         <div class="tab-panel" id="new-projects">
-            <div class="filter-bar">
-                <span class="filter-group-label">Asset type</span>
-                <button class="filter-chip active">All</button>
-                <button class="filter-chip">Real Estate</button>
-                <button class="filter-chip">Energy</button>
-                <button class="filter-chip">Agriculture</button>
-                <button class="filter-chip">Industrial</button>
-            </div>
-
             <div class="card">
-                <div class="project-card">
-                    <div class="listing-head">
-                        <div>
-                            <div style="font-weight: 700; font-size: 1rem;">Solar Farm #12</div>
-                            <div class="muted" style="font-size: 0.82rem;">Dobrogea, Romania · Energy</div>
+                @forelse($newProjects as $project)
+                    @php
+                        $totalValuation = $project->total_valuation ?? 0;
+                        $fundedAmount = ($project->total_shares - $project->available_shares) * $project->share_price;
+                        $progress = $totalValuation > 0 ? min(100, round(($fundedAmount / $totalValuation) * 100)) : 0;
+                    @endphp
+                    <div class="project-card">
+                        <div class="listing-head">
+                            <div>
+                                <div style="font-weight: 700; font-size: 1rem;">{{ $project->title }}</div>
+                                <div class="muted" style="font-size: 0.82rem;">{{ $project->category }}</div>
+                            </div>
+                            <span class="badge neutral">{{ ucfirst($project->status) }}</span>
                         </div>
-                        <span class="badge neutral">Medium risk</span>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 4px;">
-                        <span class="muted">Raised €1,420,000 of €2,000,000</span>
-                        <span style="font-weight: 700;">71%</span>
-                    </div>
-                    <div class="progress-track"><div class="progress-fill" style="width: 71%;"></div></div>
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 14px;">
-                        <div style="display: flex; gap: 20px;">
-                            <div><div class="stat-label" style="margin-bottom: 2px;">Target yield</div><div style="font-weight: 700;">7.4%</div></div>
-                            <div><div class="stat-label" style="margin-bottom: 2px;">Remaining</div><div style="font-weight: 700;">€580,000</div></div>
+                        <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 4px;">
+                            <span class="muted">Raised €{{ number_format($fundedAmount, 2) }} of €{{ number_format($totalValuation, 2) }}</span>
+                            <span style="font-weight: 700;">{{ $progress }}%</span>
                         </div>
-                        <a href="/trade" class="btn btn-gold btn-sm">Invest</a>
-                    </div>
-                </div>
-
-                <div class="project-card">
-                    <div class="listing-head">
-                        <div>
-                            <div style="font-weight: 700; font-size: 1rem;">Logistics Center #03</div>
-                            <div class="muted" style="font-size: 0.82rem;">Cluj, Romania · Industrial</div>
+                        <div class="progress-track">
+                            <div class="progress-fill" style="width: {{ $progress }}%;"></div>
                         </div>
-                        <span class="badge negative">Higher risk</span>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 4px;">
-                        <span class="muted">Raised €640,000 of €1,500,000</span>
-                        <span style="font-weight: 700;">43%</span>
-                    </div>
-                    <div class="progress-track"><div class="progress-fill" style="width: 43%;"></div></div>
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 14px;">
-                        <div style="display: flex; gap: 20px;">
-                            <div><div class="stat-label" style="margin-bottom: 2px;">Target yield</div><div style="font-weight: 700;">9.2%</div></div>
-                            <div><div class="stat-label" style="margin-bottom: 2px;">Remaining</div><div style="font-weight: 700;">€860,000</div></div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 14px;">
+                            <div style="display: flex; gap: 20px;">
+                                <div>
+                                    <div class="stat-label" style="margin-bottom: 2px;">Share Price</div>
+                                    <div style="font-weight: 700;">€{{ number_format($project->share_price, 2) }}</div>
+                                </div>
+                                <div>
+                                    <div class="stat-label" style="margin-bottom: 2px;">Available Shares</div>
+                                    <div style="font-weight: 700;">{{ number_format($project->available_shares) }}</div>
+                                </div>
+                            </div>
+                            <a href="{{ route('trade.show', $project->id) }}" class="btn btn-gold btn-sm">Invest</a>
                         </div>
-                        <a href="/trade" class="btn btn-gold btn-sm">Invest</a>
                     </div>
-                </div>
+                @empty
+                    <div style="padding: 20px; text-align: center;" class="muted">No new projects available.</div>
+                @endforelse
             </div>
         </div>
 
-        <!-- Secondary Market (V2: existing positions) -->
+        <!-- Secondary Market -->
         <div class="tab-panel" id="secondary">
-            <div class="grid grid-3" style="margin-bottom: 20px;">
-                <div class="card">
-                    <div class="stat-label">Total traded</div>
-                    <div class="stat-value">€2.4M</div>
-                </div>
-                <div class="card">
-                    <div class="stat-label">Transactions</div>
-                    <div class="stat-value">1,842</div>
-                </div>
-                <div class="card">
-                    <div class="stat-label">Avg. position price</div>
-                    <div class="stat-value">€126 <span class="badge positive" style="margin-left: 6px;">High liquidity</span></div>
-                </div>
-            </div>
-
-            <div class="filter-bar">
-                <span class="filter-group-label">Yield</span>
-                <button class="filter-chip active">All</button>
-                <button class="filter-chip">0–5%</button>
-                <button class="filter-chip">5–8%</button>
-                <button class="filter-chip">8–12%</button>
-                <button class="filter-chip">12%+</button>
-                <span class="filter-group-label" style="margin-left: 12px;">Risk</span>
-                <button class="filter-chip active">All</button>
-                <button class="filter-chip">Low</button>
-                <button class="filter-chip">Medium</button>
-                <button class="filter-chip">High</button>
-            </div>
-
             <div class="card">
-                <div class="listing-card">
-                    <div class="listing-head">
-                        <div>
-                            <div style="font-weight: 700; font-size: 1rem;">Solar Farm #12</div>
-                            <div class="muted" style="font-size: 0.82rem;">Market price €112.40 / unit · 420 units available</div>
+                @forelse($secondaryAssets as $asset)
+                    <div class="listing-card">
+                        <div class="listing-head">
+                            <div>
+                                <div style="font-weight: 700; font-size: 1rem;">{{ $asset->title }}</div>
+                                <div class="muted" style="font-size: 0.82rem;">
+                                    Market price €{{ number_format($asset->share_price, 2) }} / unit · {{ $asset->available_shares }} units available
+                                </div>
+                            </div>
                         </div>
-                        <button class="watch-toggle"><svg class="icon"><use href="#icon-heart"/></svg></button>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <div style="display: flex; gap: 20px;">
-                            <div><div class="stat-label" style="margin-bottom: 2px;">Yield</div><div style="font-weight: 700;">7.1%</div></div>
-                            <div><div class="stat-label" style="margin-bottom: 2px;">Risk</div><div style="font-weight: 700;">Medium</div></div>
-                            <div><div class="stat-label" style="margin-bottom: 2px;">Liquidity</div><div style="font-weight: 700;" class="positive">High</div></div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div style="display: flex; gap: 20px;">
+                                <div>
+                                    <div class="stat-label" style="margin-bottom: 2px;">Category</div>
+                                    <div style="font-weight: 700;">{{ $asset->category }}</div>
+                                </div>
+                            </div>
+                            <a href="{{ route('trade.show', $asset->id) }}" class="btn btn-gold btn-sm">Buy</a>
                         </div>
-                        <a href="/trade" class="btn btn-gold btn-sm">Buy</a>
                     </div>
-                </div>
-
-                <div class="listing-card">
-                    <div class="listing-head">
-                        <div>
-                            <div style="font-weight: 700; font-size: 1rem;">Bucharest Hotel</div>
-                            <div class="muted" style="font-size: 0.82rem;">Market price €10.00 / unit · 180 units available</div>
-                        </div>
-                        <button class="watch-toggle"><svg class="icon"><use href="#icon-heart"/></svg></button>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <div style="display: flex; gap: 20px;">
-                            <div><div class="stat-label" style="margin-bottom: 2px;">Yield</div><div style="font-weight: 700;">7.1%</div></div>
-                            <div><div class="stat-label" style="margin-bottom: 2px;">Risk</div><div style="font-weight: 700;">Medium</div></div>
-                            <div><div class="stat-label" style="margin-bottom: 2px;">Liquidity</div><div style="font-weight: 700;" class="muted">Moderate</div></div>
-                        </div>
-                        <a href="/trade" class="btn btn-gold btn-sm">Buy</a>
-                    </div>
-                </div>
-
-                <div class="listing-card">
-                    <div class="listing-head">
-                        <div>
-                            <div style="font-weight: 700; font-size: 1rem;">Tuscany Vineyard</div>
-                            <div class="muted" style="font-size: 0.82rem;">Market price €58.20 / unit · 90 units available</div>
-                        </div>
-                        <button class="watch-toggle"><svg class="icon"><use href="#icon-heart"/></svg></button>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <div style="display: flex; gap: 20px;">
-                            <div><div class="stat-label" style="margin-bottom: 2px;">Yield</div><div style="font-weight: 700;">5.8%</div></div>
-                            <div><div class="stat-label" style="margin-bottom: 2px;">Risk</div><div style="font-weight: 700;">Medium</div></div>
-                            <div><div class="stat-label" style="margin-bottom: 2px;">Liquidity</div><div style="font-weight: 700;" class="negative">Low</div></div>
-                        </div>
-                        <a href="/trade" class="btn btn-gold btn-sm">Buy</a>
-                    </div>
-                </div>
+                @empty
+                    <div style="padding: 20px; text-align: center;" class="muted">No secondary market listings.</div>
+                @endforelse
             </div>
         </div>
 
         <!-- Watchlist -->
         <div class="tab-panel" id="watchlist">
             <div class="card">
-                <div class="listing-card">
-                    <div class="listing-head">
-                        <div>
-                            <div style="font-weight: 700;">Bucharest Hotel</div>
-                            <div class="muted" style="font-size: 0.82rem;">€10.00 / unit</div>
+                @forelse($watchlist as $item)
+                    <div class="listing-card">
+                        <div class="listing-head">
+                            <div>
+                                <div style="font-weight: 700;">{{ $item->title }}</div>
+                                <div class="muted" style="font-size: 0.82rem;">€{{ number_format($item->share_price, 2) }} / unit</div>
+                            </div>
                         </div>
-                        <button class="watch-toggle is-active"><svg class="icon"><use href="#icon-heart"/></svg></button>
                     </div>
-                    <span class="badge positive">+2.1% this week</span>
-                </div>
-                <div class="listing-card">
-                    <div class="listing-head">
-                        <div>
-                            <div style="font-weight: 700;">Tuscany Vineyard</div>
-                            <div class="muted" style="font-size: 0.82rem;">€58.20 / unit</div>
-                        </div>
-                        <button class="watch-toggle is-active"><svg class="icon"><use href="#icon-heart"/></svg></button>
-                    </div>
-                    <span class="badge negative">-0.6% this week</span>
-                </div>
-                <div class="listing-card">
-                    <div class="listing-head">
-                        <div>
-                            <div style="font-weight: 700;">Logistics Center #03</div>
-                            <div class="muted" style="font-size: 0.82rem;">Fundraising · 43% funded</div>
-                        </div>
-                        <button class="watch-toggle is-active"><svg class="icon"><use href="#icon-heart"/></svg></button>
-                    </div>
-                    <span class="badge neutral">New listing</span>
-                </div>
+                @empty
+                    <div style="padding: 20px; text-align: center;" class="muted">Your watchlist is currently empty.</div>
+                @endforelse
             </div>
         </div>
 
@@ -244,22 +139,29 @@
         <div class="tab-panel" id="my-listings">
             <div class="card">
                 <table>
-                    <thead><tr><th>Asset</th><th>Units listed</th><th>Ask price</th><th>Status</th><th></th></tr></thead>
+                    <thead>
+                        <tr>
+                            <th>Asset</th>
+                            <th>Units listed</th>
+                            <th>Ask price</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
                     <tbody>
-                        <tr>
-                            <td style="font-weight: 700;">Tuscany Vineyard</td>
-                            <td>300</td>
-                            <td>€112.40</td>
-                            <td><span class="badge positive">Active</span></td>
-                            <td><button class="btn btn-danger-outline btn-sm">Cancel</button></td>
-                        </tr>
-                        <tr>
-                            <td style="font-weight: 700;">Solar Farm #12</td>
-                            <td>150</td>
-                            <td>€110.00</td>
-                            <td><span class="badge muted">Filled</span></td>
-                            <td class="muted" style="font-size: 0.82rem;">Sep 3</td>
-                        </tr>
+                        @forelse($userListings as $listing)
+                            <tr>
+                                <td style="font-weight: 700;">{{ $listing->asset->title ?? 'N/A' }}</td>
+                                <td>{{ $listing->shares }}</td>
+                                <td>€{{ number_format($listing->price_per_share, 2) }}</td>
+                                <td><span class="badge positive">{{ ucfirst($listing->status) }}</span></td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="4" class="muted" style="text-align: center; padding: 20px;">
+                                    You have no active listings.
+                                </td>
+                            </tr>
+                        @endforelse
                     </tbody>
                 </table>
             </div>

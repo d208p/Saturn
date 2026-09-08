@@ -2,8 +2,27 @@
 @section('title', 'Portfolio')
 
 @section('content')
+    @php
+        // Dynamic calculations based on user holdings
+        $holdings = $user->holdings ?? collect();
+        $investedTotal = $holdings->sum('total_invested');
+        
+        // Compute current market value of all holdings
+        $holdingsValue = $holdings->sum(function ($holding) {
+            return $holding->shares_owned * ($holding->asset->share_price ?? 0);
+        });
+        
+        $availableCash = $user->balance ?? 0;
+        $portfolioValue = $holdingsValue + $availableCash;
+
+        // Group holdings by category for dynamic allocation calculation
+        $categoryHoldings = $holdings->groupBy(function ($holding) {
+            return $holding->asset->category ?? 'Other';
+        });
+    @endphp
+
     <div class="tabs" data-panels="#portfolio-panels">
-        <button class="tab-btn" data-tab="overview">Overview</button>
+        <button class="tab-btn active" data-tab="overview">Overview</button>
         <button class="tab-btn" data-tab="holdings">Holdings</button>
         <button class="tab-btn" data-tab="allocation">Allocation</button>
         <button class="tab-btn" data-tab="performance">Performance</button>
@@ -12,19 +31,19 @@
     <div id="portfolio-panels">
 
         <!-- Overview -->
-        <div class="tab-panel" id="overview">
+        <div class="tab-panel active" id="overview">
             <div class="grid grid-3" style="margin-bottom: 24px;">
                 <div class="card">
                     <div class="stat-label">Portfolio value</div>
-                    <div class="stat-value">€42,850</div>
+                    <div class="stat-value">€{{ number_format($portfolioValue, 2) }}</div>
                 </div>
                 <div class="card">
                     <div class="stat-label">Invested</div>
-                    <div class="stat-value">€38,200</div>
+                    <div class="stat-value">€{{ number_format($investedTotal, 2) }}</div>
                 </div>
                 <div class="card">
                     <div class="stat-label">Available cash</div>
-                    <div class="stat-value">€4,650</div>
+                    <div class="stat-value">€{{ number_format($availableCash, 2) }}</div>
                 </div>
             </div>
 
@@ -49,39 +68,38 @@
             <div class="card">
                 <div class="card-header">
                     <div class="section-title">Your holdings</div>
-                    <span class="muted" style="font-size: 0.82rem;">3 positions</span>
+                    <span class="muted" style="font-size: 0.82rem;">{{ $holdings->count() }} {{ Str::plural('position', $holdings->count()) }}</span>
                 </div>
                 <table>
                     <thead>
-                        <tr><th>Asset</th><th>Type</th><th>Value</th><th>Return</th><th>Yield</th></tr>
+                        <tr>
+                            <th>Asset</th>
+                            <th>Category</th>
+                            <th>Shares</th>
+                            <th>Value</th>
+                        </tr>
                     </thead>
                     <tbody>
-                        <tr class="row-link" onclick="window.location.href='/asset'">
-                            <td style="font-weight: 700;">Bucharest Hotel</td>
-                            <td class="muted">Hospitality</td>
-                            <td>€12,400</td>
-                            <td class="positive">+14.2%</td>
-                            <td>7.1%</td>
-                        </tr>
-                        <tr class="row-link" onclick="window.location.href='/asset'">
-                            <td style="font-weight: 700;">Solar Farm #12</td>
-                            <td class="muted">Energy</td>
-                            <td>€9,800</td>
-                            <td class="positive">+8.7%</td>
-                            <td>6.4%</td>
-                        </tr>
-                        <tr class="row-link" onclick="window.location.href='/asset'">
-                            <td style="font-weight: 700;">Tuscany Vineyard</td>
-                            <td class="muted">Agriculture</td>
-                            <td>€7,200</td>
-                            <td class="positive">+17.3%</td>
-                            <td>5.8%</td>
-                        </tr>
+                        @forelse($holdings as $holding)
+                            @php
+                                $asset = $holding->asset;
+                                $currentValue = $holding->shares_owned * ($asset->share_price ?? 0);
+                            @endphp
+                            <tr class="row-link" onclick="window.location.href='/asset/{{ $asset->id ?? '' }}'">
+                                <td style="font-weight: 700;">{{ $asset->title ?? 'Unknown Asset' }}</td>
+                                <td class="muted">{{ $asset->category ?? 'General' }}</td>
+                                <td>{{ number_format($holding->shares_owned) }}</td>
+                                <td>€{{ number_format($currentValue, 2) }}</td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="4" class="muted" style="text-align: center; padding: 24px;">
+                                    You don't own any equity positions yet.
+                                </td>
+                            </tr>
+                        @endforelse
                     </tbody>
                 </table>
-                <p class="muted" style="font-size: 0.78rem; margin-top: 16px;">
-                    Rows link to the asset detail template — wire each to its own asset once real data is in place.
-                </p>
             </div>
         </div>
 
@@ -90,49 +108,25 @@
             <div class="grid grid-2">
                 <div class="card">
                     <div class="section-title">By asset type</div>
-                    <div class="allocation-row">
-                        <div class="top"><span>Real Estate</span><span>42%</span></div>
-                        <div class="allocation-bar"><div class="allocation-fill" style="width: 42%;"></div></div>
-                    </div>
-                    <div class="allocation-row">
-                        <div class="top"><span>Energy</span><span>27%</span></div>
-                        <div class="allocation-bar"><div class="allocation-fill" style="width: 27%;"></div></div>
-                    </div>
-                    <div class="allocation-row">
-                        <div class="top"><span>Agriculture</span><span>18%</span></div>
-                        <div class="allocation-bar"><div class="allocation-fill" style="width: 18%;"></div></div>
-                    </div>
-                    <div class="allocation-row">
-                        <div class="top"><span>Industrial</span><span>9%</span></div>
-                        <div class="allocation-bar"><div class="allocation-fill" style="width: 9%;"></div></div>
-                    </div>
-                    <div class="allocation-row">
-                        <div class="top"><span>Development</span><span>4%</span></div>
-                        <div class="allocation-bar"><div class="allocation-fill" style="width: 4%;"></div></div>
-                    </div>
+                    @forelse($categoryHoldings as $category => $group)
+                        @php
+                            $catValue = $group->sum(fn($h) => $h->shares_owned * ($h->asset->share_price ?? 0));
+                            $percentage = $holdingsValue > 0 ? round(($catValue / $holdingsValue) * 100) : 0;
+                        @endphp
+                        <div class="allocation-row">
+                            <div class="top"><span>{{ $category }}</span><span>{{ $percentage }}%</span></div>
+                            <div class="allocation-bar"><div class="allocation-fill" style="width: {{ $percentage }}%;"></div></div>
+                        </div>
+                    @empty
+                        <p class="muted" style="font-size: 0.85rem;">No holdings available to calculate allocation.</p>
+                    @endforelse
                 </div>
 
                 <div class="card">
                     <div class="section-title">Geographic allocation</div>
                     <div class="allocation-row">
-                        <div class="top"><span>Romania</span><span>38%</span></div>
-                        <div class="allocation-bar"><div class="allocation-fill" style="width: 38%;"></div></div>
-                    </div>
-                    <div class="allocation-row">
-                        <div class="top"><span>Italy</span><span>26%</span></div>
-                        <div class="allocation-bar"><div class="allocation-fill" style="width: 26%;"></div></div>
-                    </div>
-                    <div class="allocation-row">
-                        <div class="top"><span>France</span><span>18%</span></div>
-                        <div class="allocation-bar"><div class="allocation-fill" style="width: 18%;"></div></div>
-                    </div>
-                    <div class="allocation-row">
-                        <div class="top"><span>Spain</span><span>11%</span></div>
-                        <div class="allocation-bar"><div class="allocation-fill" style="width: 11%;"></div></div>
-                    </div>
-                    <div class="allocation-row">
-                        <div class="top"><span>Other</span><span>7%</span></div>
-                        <div class="allocation-bar"><div class="allocation-fill" style="width: 7%;"></div></div>
+                        <div class="top"><span>Romania</span><span>100%</span></div>
+                        <div class="allocation-bar"><div class="allocation-fill" style="width: 100%;"></div></div>
                     </div>
                 </div>
             </div>
@@ -173,10 +167,10 @@
                 <table>
                     <thead><tr><th>Period</th><th>Return</th></tr></thead>
                     <tbody>
-                        <tr><td>1 month</td><td class="positive">+2.1%</td></tr>
-                        <tr><td>6 months</td><td class="positive">+6.8%</td></tr>
-                        <tr><td>1 year</td><td class="positive">+11.1%</td></tr>
-                        <tr><td>All time</td><td class="positive">+14.6%</td></tr>
+                        <tr><td>1 month</td><td class="positive">+0.0%</td></tr>
+                        <tr><td>6 months</td><td class="positive">+0.0%</td></tr>
+                        <tr><td>1 year</td><td class="positive">+0.0%</td></tr>
+                        <tr><td>All time</td><td class="positive">+0.0%</td></tr>
                     </tbody>
                 </table>
             </div>
