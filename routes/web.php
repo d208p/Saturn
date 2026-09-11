@@ -12,6 +12,7 @@ use App\Http\Controllers\IncomeController;
 use App\Http\Controllers\AssetController;
 use App\Http\Controllers\ActivityController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\AccountController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -54,6 +55,19 @@ Route::middleware('auth')->group(function () {
     Route::get('/activity', [ActivityController::class, 'index'])->name('activity');
     Route::get('/trade/{asset}', [TradeController::class, 'show'])->name('trade.show');
     Route::post('/trade/{asset}', [TradeController::class, 'store'])->name('trade.store');
+    Route::get('/account', [AccountController::class, 'index'])->name('account.index');
+    Route::put('/account/profile', [AccountController::class, 'updateProfile'])->name('account.profile');
+    Route::put('/account/password', [AccountController::class, 'updatePassword'])->name('account.password');
+    
+    // Bank & Withdrawal Routes
+    Route::post('/account/bank', [AccountController::class, 'storeBank'])->name('account.bank.store');
+    Route::post('/account/withdraw', [AccountController::class, 'withdraw'])->name('account.withdraw');
+    
+    // Verification Route
+    Route::post('/account/accreditation', [AccountController::class, 'requestAccreditation'])->name('account.accreditation');
+    
+    // Session Route
+    Route::delete('/account/session/{id}', [AccountController::class, 'logoutSession'])->name('account.session.destroy');
 });
 
 Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {

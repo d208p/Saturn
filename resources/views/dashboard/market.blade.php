@@ -89,33 +89,38 @@
         </div>
 
         <!-- Secondary Market -->
-        <div class="tab-panel" id="secondary">
-            <div class="card">
-                @forelse($secondaryAssets as $asset)
-                    <div class="listing-card">
-                        <div class="listing-head">
-                            <div>
-                                <div style="font-weight: 700; font-size: 1rem;">{{ $asset->title }}</div>
-                                <div class="muted" style="font-size: 0.82rem;">
-                                    Market price €{{ number_format($asset->share_price, 2) }} / unit · {{ $asset->available_shares }} units available
-                                </div>
-                            </div>
-                        </div>
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <div style="display: flex; gap: 20px;">
-                                <div>
-                                    <div class="stat-label" style="margin-bottom: 2px;">Category</div>
-                                    <div style="font-weight: 700;">{{ $asset->category }}</div>
-                                </div>
-                            </div>
-                            <a href="{{ route('trade.show', $asset->id) }}" class="btn btn-gold btn-sm">Buy</a>
+<div class="tab-panel" id="secondary">
+    <div class="card">
+        @forelse($secondaryAssets as $order)
+            <div class="listing-card">
+                <div class="listing-head">
+                    <div>
+                        <div style="font-weight: 700; font-size: 1rem;">{{ $order->asset->title ?? 'Asset N/A' }}</div>
+                        <div class="muted" style="font-size: 0.82rem;">
+                            Seller: {{ $order->user->name ?? 'User #'.$order->user_id }} · Category: {{ $order->asset->category ?? 'General' }}
                         </div>
                     </div>
-                @empty
-                    <div style="padding: 20px; text-align: center;" class="muted">No secondary market listings.</div>
-                @endforelse
+                    <span class="badge neutral">Secondary Order</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
+                    <div style="display: flex; gap: 20px;">
+                        <div>
+                            <div class="stat-label" style="margin-bottom: 2px;">Ask Price</div>
+                            <div style="font-weight: 700;">€{{ number_format($order->price_per_share, 2) }} / share</div>
+                        </div>
+                        <div>
+                            <div class="stat-label" style="margin-bottom: 2px;">Units Offered</div>
+                            <div style="font-weight: 700;">{{ number_format($order->shares) }}</div>
+                        </div>
+                    </div>
+                    <a href="{{ route('trade.show', $order->asset_id) }}" class="btn btn-gold btn-sm">Buy Order</a>
+                </div>
             </div>
-        </div>
+        @empty
+            <div style="padding: 20px; text-align: center;" class="muted">No active secondary market listings available.</div>
+        @endforelse
+    </div>
+</div>
 
         <!-- Watchlist -->
         <div class="tab-panel" id="watchlist">
@@ -136,36 +141,46 @@
         </div>
 
         <!-- My Listings -->
-        <div class="tab-panel" id="my-listings">
-            <div class="card">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Asset</th>
-                            <th>Units listed</th>
-                            <th>Ask price</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse($userListings as $listing)
-                            <tr>
-                                <td style="font-weight: 700;">{{ $listing->asset->title ?? 'N/A' }}</td>
-                                <td>{{ $listing->shares }}</td>
-                                <td>€{{ number_format($listing->price_per_share, 2) }}</td>
-                                <td><span class="badge positive">{{ ucfirst($listing->status) }}</span></td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="4" class="muted" style="text-align: center; padding: 20px;">
-                                    You have no active listings.
-                                </td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
-        </div>
+<div class="tab-panel" id="my-listings">
+    <div class="card">
+        <table>
+            <thead>
+                <tr>
+                    <th>Asset</th>
+                    <th>Units Listed</th>
+                    <th>Ask Price</th>
+                    <th>Date Listed</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                @forelse($userListings as $listing)
+                    <tr>
+                        <td style="font-weight: 700;">{{ $listing->asset->title ?? 'N/A' }}</td>
+                        <td>{{ number_format($listing->shares) }}</td>
+                        <td>€{{ number_format($listing->price_per_share, 2) }}</td>
+                        <td>{{ $listing->created_at->format('M d, Y') }}</td>
+                        <td>
+                            @if($listing->status === 'active')
+                                <span class="badge positive">Active</span>
+                            @elseif($listing->status === 'filled')
+                                <span class="badge neutral">Filled</span>
+                            @else
+                                <span class="badge negative">{{ ucfirst($listing->status) }}</span>
+                            @endif
+                        </td>
+                    </tr>
+                @empty
+                    <tr>
+                        <td colspan="5" class="muted" style="text-align: center; padding: 20px;">
+                            You have no active or previous listings.
+                        </td>
+                    </tr>
+                @endforelse
+            </tbody>
+        </table>
+    </div>
+</div>
 
     </div>
 @endsection

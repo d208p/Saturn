@@ -7,6 +7,7 @@ use App\Models\Holding;
 use App\Models\Transaction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use App\Models\SellOrder;
 use Illuminate\Support\Facades\Auth;
 
 class TradeController extends Controller
@@ -91,27 +92,32 @@ class TradeController extends Controller
                     ->first();
 
                 if (!$holding || $holding->shares_owned < $shares) {
-                    return back()->withErrors(['trade' => 'You do not own enough shares to perform this sale.']);
+                    return back()->withErrors(['trade' => 'You do not own enough shares to list for sale.']);
                 }
 
-                // Add balance and reduce position
-                DB::table('users')->where('id', $userId)->increment('balance', $totalAmount);
+                // 1. Reducem acțiunile disponibile ale vânzătorului (sunt blocate în ordinul de vânzare)
                 $holding->decrement('shares_owned', $shares);
 
-                // Re-add shares back to secondary pool
-                $lockedAsset->increment('available_shares', $shares);
+                // 2. Creăm ordinul pe piață secundară
+                SellOrder::create([
+                    'user_id' => $userId,
+                    'asset_id' => $lockedAsset->id,
+                    'shares' => $shares,
+                    'price_per_share' => $lockedAsset->share_price,
+                    'status' => 'active',
+                ]);
 
-                // Log transaction
+                // 3. Înregistrăm intenția în jurnalul de tranzacții
                 Transaction::create([
                     'user_id' => $userId,
                     'asset_id' => $lockedAsset->id,
                     'type' => 'sell_equity',
                     'amount' => $totalAmount,
                     'shares' => $shares,
-                    'status' => 'completed',
+                    'status' => 'listed', // Statusul devine "listed" în loc de "completed"
                 ]);
 
-                return redirect('/portfolio#holdings')->with('success', 'Shares sold successfully.');
+                return redirect('/portfolio#holdings')->with('success', 'Shares successfully listed on the secondary market.');
             }
         });
     }
