@@ -113,7 +113,7 @@
                             <div style="font-weight: 700;">{{ number_format($order->shares) }}</div>
                         </div>
                     </div>
-                    <a href="{{ route('trade.show', $order->asset_id) }}" class="btn btn-gold btn-sm">Buy Order</a>
+                    <a href="{{ route('secondary.buy.show', $order->id) }}" class="btn btn-gold btn-sm">Buy Order</a>
                 </div>
             </div>
         @empty
@@ -151,6 +151,7 @@
                     <th>Ask Price</th>
                     <th>Date Listed</th>
                     <th>Status</th>
+                    <th style="text-align: right;">Action</th>
                 </tr>
             </thead>
             <tbody>
@@ -169,10 +170,22 @@
                                 <span class="badge negative">{{ ucfirst($listing->status) }}</span>
                             @endif
                         </td>
+                        <td style="text-align: right;">
+                            @if($listing->status === 'active')
+                                <form action="{{ route('listings.cancel', $listing->id) }}" method="POST" style="display: inline;" onsubmit="return confirm('Ești sigur că vrei să anulezi acest listing? Acțiunile vor fi returnate în portofoliu.');">
+                                    @csrf
+                                    <button type="submit" class="btn btn-sm" style="background: rgba(255, 107, 107, 0.15); color: #ff6b6b; border: 1px solid rgba(255, 107, 107, 0.3);">
+                                        Cancel
+                                    </button>
+                                </form>
+                            @else
+                                <span class="muted" style="font-size: 0.82rem;">—</span>
+                            @endif
+                        </td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="5" class="muted" style="text-align: center; padding: 20px;">
+                        <td colspan="6" class="muted" style="text-align: center; padding: 20px;">
                             You have no active or previous listings.
                         </td>
                     </tr>

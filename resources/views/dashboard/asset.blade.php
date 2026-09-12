@@ -101,7 +101,7 @@
 
                 <div style="display: flex; gap: 10px; margin-top: 18px;">
                     <a href="{{ route('trade.show', $asset->id) }}?side=buy" class="btn btn-gold btn-block">Buy</a>
-                    <a href="{{ route('trade.show', $asset->id) }}?side=sell" class="btn btn-outline btn-block">Sell</a>
+                    <a href="{{ route('listings.create', $asset->id) }}" class="btn btn-outline btn-block">Sell</a>
                 </div>
             </div>
 
