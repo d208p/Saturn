@@ -91,29 +91,29 @@
         <!-- Secondary Market -->
 <div class="tab-panel" id="secondary">
     <div class="card">
-        @forelse($secondaryAssets as $order)
+        @forelse($secondaryAssets as $asset)
             <div class="listing-card">
                 <div class="listing-head">
                     <div>
-                        <div style="font-weight: 700; font-size: 1rem;">{{ $order->asset->title ?? 'Asset N/A' }}</div>
+                        <div style="font-weight: 700; font-size: 1rem;">{{ $asset->title }}</div>
                         <div class="muted" style="font-size: 0.82rem;">
-                            Seller: {{ $order->user->name ?? 'User #'.$order->user_id }} · Category: {{ $order->asset->category ?? 'General' }}
+                            Category: {{ $asset->category ?? 'General' }} · {{ $asset->active_listings_count }} Active Seller Offer(s)
                         </div>
                     </div>
-                    <span class="badge neutral">Secondary Order</span>
+                    <span class="badge neutral">Secondary Market</span>
                 </div>
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
                     <div style="display: flex; gap: 20px;">
                         <div>
-                            <div class="stat-label" style="margin-bottom: 2px;">Ask Price</div>
-                            <div style="font-weight: 700;">€{{ number_format($order->price_per_share, 2) }} / share</div>
+                            <div class="stat-label" style="margin-bottom: 2px;">Starting From</div>
+                            <div style="font-weight: 700; color: var(--gold);">€{{ number_format($asset->min_price, 2) }} / share</div>
                         </div>
                         <div>
-                            <div class="stat-label" style="margin-bottom: 2px;">Units Offered</div>
-                            <div style="font-weight: 700;">{{ number_format($order->shares) }}</div>
+                            <div class="stat-label" style="margin-bottom: 2px;">Total Units Available</div>
+                            <div style="font-weight: 700;">{{ number_format($asset->total_secondary_shares) }}</div>
                         </div>
                     </div>
-                    <a href="{{ route('secondary.buy.show', $order->id) }}" class="btn btn-gold btn-sm">Buy Order</a>
+                    <a href="{{ route('secondary.asset.show', $asset->id) }}" class="btn btn-gold btn-sm">View Market & Buy</a>
                 </div>
             </div>
         @empty

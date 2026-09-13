@@ -64,8 +64,8 @@ Route::middleware('auth')->group(function () {
     Route::post('/account/withdraw', [AccountController::class, 'withdraw'])->name('account.withdraw');
     Route::post('/account/accreditation', [AccountController::class, 'requestAccreditation'])->name('account.accreditation');
     Route::delete('/account/session/{id}', [AccountController::class, 'logoutSession'])->name('account.session.destroy');
-    Route::get('/secondary/buy/{sellOrder}', [SecondaryMarketController::class, 'show'])->name('secondary.buy.show');
-    Route::post('/secondary/buy/{sellOrder}', [SecondaryMarketController::class, 'buy'])->name('secondary.buy.process');
+    Route::get('/secondary/asset/{asset}', [SecondaryMarketController::class, 'showAssetListings'])->name('secondary.asset.show');
+    Route::post('/secondary/asset/{asset}/buy', [SecondaryMarketController::class, 'buyFromMarket'])->name('secondary.asset.buy');
     Route::get('/listings/create/{asset}', [ListingController::class, 'create'])->name('listings.create');
     Route::post('/listings/store/{asset}', [ListingController::class, 'store'])->name('listings.store');
     Route::post('/listings/{sellOrder}/cancel', [ListingController::class, 'cancel'])->name('listings.cancel');
@@ -74,4 +74,5 @@ Route::middleware('auth')->group(function () {
 Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/', [AdminDashboardController::class, 'index'])->name('dashboard');
     Route::post('/assets', [AdminDashboardController::class, 'storeAsset'])->name('assets.store');
+    Route::post('/assets/distribute', [AdminDashboardController::class, 'distributeProfit'])->name('assets.distribute');
 });
