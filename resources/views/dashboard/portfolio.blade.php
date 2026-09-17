@@ -5,7 +5,6 @@
     @php
         // Dynamic calculations based on user holdings
         $holdings = $user->holdings ?? collect();
-        $investedTotal = $holdings->sum('total_invested');
         
         // Compute current market value of all holdings
         $holdingsValue = $holdings->sum(function ($holding) {
@@ -39,7 +38,7 @@
                 </div>
                 <div class="card">
                     <div class="stat-label">Invested</div>
-                    <div class="stat-value">€{{ number_format($investedTotal, 2) }}</div>
+                    <div class="stat-value">€{{ number_format($holdingsValue, 2) }}</div>
                 </div>
                 <div class="card">
                     <div class="stat-label">Available cash</div>

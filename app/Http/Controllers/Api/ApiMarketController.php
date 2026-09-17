@@ -1,25 +1,24 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Api;
 
+use App\Http\Controllers\Controller;
 use App\Models\Asset;
 use App\Models\SellOrder;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 
-class MarketController extends Controller
+class ApiMarketController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $userId = Auth::id();
+        $userId = $request->user()->id;
 
-        // 1. Primary Market: Proiecte noi în finanțare
+        // 1. Primary Market Projects
         $newProjects = Asset::where('status', 'active')
             ->latest()
             ->get();
 
-        // 2. Secondary Market: Asset-uri grupate stil Steam Market
+        // 2. Secondary Market Assets
         $secondaryAssets = Asset::whereHas('sellOrders', function ($query) use ($userId) {
                 $query->where('status', 'active')
                       ->where('user_id', '!=', $userId);
@@ -35,20 +34,20 @@ class MarketController extends Controller
             }], 'price_per_share')
             ->get();
 
-        // 3. Listings-urile proprii ale utilizatorului
+        // 3. User Listings
         $userListings = SellOrder::with('asset')
             ->where('user_id', $userId)
             ->latest()
             ->get();
 
-        // 4. Watchlist
+        // 4. Watchlist (placeholder collect or relationship)
         $watchlist = collect();
 
-        return view('dashboard.market', compact(
-            'newProjects',
-            'secondaryAssets',
-            'userListings',
-            'watchlist'
-        ));
+        return response()->json([
+            'new_projects' => $newProjects,
+            'secondary_assets' => $secondaryAssets,
+            'user_listings' => $userListings,
+            'watchlist' => $watchlist,
+        ]);
     }
 }
