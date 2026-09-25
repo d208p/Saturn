@@ -15,6 +15,9 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\SecondaryMarketController;
 use App\Http\Controllers\ListingController;
+use App\Http\Controllers\DepositController;
+use App\Http\Controllers\WithdrawalController;
+use App\Http\Controllers\StripeWebHookController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -36,6 +39,11 @@ Route::get('/register', function () {
 })->name('register');
 
 Route::post('/register', [RegisteredUserController::class, 'store']);
+
+Route::post(
+    '/stripe/webhook',
+    [StripeWebhookController::class, 'handle']
+)->name('stripe.webhook');
 
 Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])
     ->middleware('auth')
@@ -60,8 +68,20 @@ Route::middleware('auth')->group(function () {
     Route::get('/account', [AccountController::class, 'index'])->name('account.index');
     Route::put('/account/profile', [AccountController::class, 'updateProfile'])->name('account.profile');
     Route::put('/account/password', [AccountController::class, 'updatePassword'])->name('account.password');
-    Route::post('/account/bank', [AccountController::class, 'storeBank'])->name('account.bank.store');
-    Route::post('/account/withdraw', [AccountController::class, 'withdraw'])->name('account.withdraw');
+    Route::get(
+        '/account/stripe/onboarding',
+        [AccountController::class, 'startStripeOnboarding']
+    )->name('account.stripe.onboarding');
+
+    Route::get(
+        '/account/stripe/return',
+        [AccountController::class, 'stripeOnboardingReturn']
+    )->name('account.stripe.return');
+
+    Route::get(
+        '/account/stripe/refresh',
+        [AccountController::class, 'stripeOnboardingRefresh']
+    )->name('account.stripe.refresh');
     Route::post('/account/accreditation', [AccountController::class, 'requestAccreditation'])->name('account.accreditation');
     Route::delete('/account/session/{id}', [AccountController::class, 'logoutSession'])->name('account.session.destroy');
     Route::get('/secondary/asset/{asset}', [SecondaryMarketController::class, 'showAssetListings'])->name('secondary.asset.show');
@@ -69,6 +89,15 @@ Route::middleware('auth')->group(function () {
     Route::get('/listings/create/{asset}', [ListingController::class, 'create'])->name('listings.create');
     Route::post('/listings/store/{asset}', [ListingController::class, 'store'])->name('listings.store');
     Route::post('/listings/{sellOrder}/cancel', [ListingController::class, 'cancel'])->name('listings.cancel');
+    Route::get('/deposit', [DepositController::class, 'show'])
+        ->name('deposit.show');
+
+    Route::post('/deposit/create-payment-intent', [DepositController::class, 'createPaymentIntent'])
+        ->name('deposit.createPaymentIntent');
+
+    // withdraw cash
+    Route::get('/withdraw', [WithdrawalController::class, 'show'])->name('withdraw.show');
+    Route::post('/withdraw', [WithdrawalController::class, 'process'])->name('withdraw.process');
 });
 
 Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {

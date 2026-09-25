@@ -13,6 +13,8 @@ class Transaction extends Model
         'amount',
         'shares',
         'status',
+        'stripe_transfer_id',
+        'stripe_payout_id',
     ];
 
     public function user()

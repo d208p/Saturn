@@ -13,23 +13,34 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+
         $middleware->api(prepend: [
             \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
         ]);
 
         $middleware->alias([
             'verified' => \App\Http\Middleware\EnsureEmailIsVerified::class,
-        ]);
-
-        //
-    })
-    ->withMiddleware(function (Middleware $middleware) {
-        $middleware->alias([
             'admin' => \App\Http\Middleware\EnsureUserIsAdmin::class,
         ]);
+
+        /*
+         * Stripe webhooks do not contain
+         * a Laravel CSRF token.
+         */
+        $middleware->validateCsrfTokens(
+            except: [
+                'stripe/webhook',
+            ]
+        );
+
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+
         $exceptions->shouldRenderJsonWhen(
-            fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
+            fn (Request $request) =>
+                $request->is('api/*') ||
+                $request->expectsJson(),
         );
-    })->create();
+
+    })
+    ->create();
