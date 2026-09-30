@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Asset;
 use App\Models\Holding;
+use App\Models\PlatformFee;
 use App\Models\SellOrder;
 use App\Models\Transaction;
 use App\Models\User;
@@ -13,9 +14,8 @@ use Illuminate\Support\Facades\DB;
 
 class SecondaryMarketController extends Controller
 {
-    const PLATFORM_FEE_PERCENT = 0.033; // 3.3% comision platformă
+    const PLATFORM_FEE_PERCENT = 0.033; // 3.3% platform fee
 
-    // Afișează pagina proiectului din piața secundară cu toate ordinele ordonate crescător după preț
     public function showAssetListings(Asset $asset)
     {
         $userId = Auth::id();
@@ -24,7 +24,7 @@ class SecondaryMarketController extends Controller
             ->where('asset_id', $asset->id)
             ->where('status', 'active')
             ->where('user_id', '!=', $userId)
-            ->orderBy('price_per_share', 'asc') // Cel mai ieftin primul!
+            ->orderBy('price_per_share', 'asc')
             ->get();
 
         $totalAvailableShares = $listings->sum('shares');
@@ -33,7 +33,6 @@ class SecondaryMarketController extends Controller
         return view('dashboard.secondary-asset', compact('asset', 'listings', 'totalAvailableShares', 'minPrice'));
     }
 
-    // Cumparare automatizată stil Steam (de la cel mai ieftin ordin la cel mai scump)
     public function buyFromMarket(Request $request, Asset $asset)
     {
         $buyer = Auth::user();
@@ -44,7 +43,6 @@ class SecondaryMarketController extends Controller
 
         $requestedShares = (int) $request->input('shares');
 
-        // Preluăm ordinele active ordonate după cel mai mic preț
         $availableOrders = SellOrder::where('asset_id', $asset->id)
             ->where('status', 'active')
             ->where('user_id', '!=', $buyer->id)
@@ -57,7 +55,6 @@ class SecondaryMarketController extends Controller
             return back()->withErrors(['buy' => "Sunt disponibile doar {$totalSharesAvailable} acțiuni pe piață."]);
         }
 
-        // Calculăm costul estimat și verificăm balanța cumpărătorului
         $remainingSharesToProcess = $requestedShares;
         $totalSubtotal = 0;
         $ordersToFulfill = [];
@@ -87,55 +84,66 @@ class SecondaryMarketController extends Controller
             ]);
         }
 
-        // Executăm achiziția în tranzacție DB
         DB::transaction(function () use ($buyer, $asset, $ordersToFulfill, $totalCostWithFee, $platformFee) {
-            // 1. Scădem totalul (subtotal + taxă) din contul cumpărătorului
+            // 1. Deduct total cost from buyer's Saturn balance
             $buyer->decrement('balance', $totalCostWithFee);
 
-            // 2. Procesăm fiecare ordin din ladder
+            $totalSharesBought = 0;
+
+            // 2. Process ladder orders and payout sellers
             foreach ($ordersToFulfill as $item) {
                 /** @var SellOrder $order */
                 $order = $item['order'];
                 $sharesTaken = $item['shares_to_take'];
-                $payoutToSeller = $item['cost']; // Vânzătorul primește valoarea acțiunilor sale
+                $payoutToSeller = $item['cost'];
+                $totalSharesBought += $sharesTaken;
 
-                // Transferăm banii către vânzător
+                // Credit seller
                 $seller = User::findOrFail($order->user_id);
                 $seller->increment('balance', $payoutToSeller);
 
-                // Scădem stocul din ordin sau îl închidem
+                // Update or close order
                 if ($sharesTaken == $order->shares) {
                     $order->update(['shares' => 0, 'status' => 'filled']);
                 } else {
                     $order->decrement('shares', $sharesTaken);
                 }
 
-                // Tranzacție vânzător
+                // Log seller transaction
                 Transaction::create([
-                    'user_id' => $seller->id,
+                    'user_id'  => $seller->id,
                     'asset_id' => $asset->id,
-                    'type' => 'sell_secondary',
-                    'amount' => $payoutToSeller,
-                    'shares' => $sharesTaken,
-                    'status' => 'completed',
+                    'type'     => 'sell_secondary',
+                    'amount'   => $payoutToSeller,
+                    'shares'   => $sharesTaken,
+                    'status'   => 'completed',
                 ]);
             }
 
-            // 3. Adăugăm acțiunile cumpărate în contul cumpărătorului
+            // 3. Update buyer's share holdings
             $buyerHolding = Holding::firstOrCreate(
                 ['user_id' => $buyer->id, 'asset_id' => $asset->id],
                 ['shares_owned' => 0]
             );
-            $buyerHolding->increment('shares_owned', array_sum(array_column($ordersToFulfill, 'shares_to_take')));
+            $buyerHolding->increment('shares_owned', $totalSharesBought);
 
-            // 4. Tranzacție cumpărător
+            // 4. Log buyer transaction
             Transaction::create([
-                'user_id' => $buyer->id,
+                'user_id'  => $buyer->id,
                 'asset_id' => $asset->id,
-                'type' => 'buy_secondary',
-                'amount' => $totalCostWithFee,
-                'shares' => array_sum(array_column($ordersToFulfill, 'shares_to_take')),
-                'status' => 'completed',
+                'type'     => 'buy_secondary',
+                'amount'   => $totalCostWithFee,
+                'shares'   => $totalSharesBought,
+                'status'   => 'completed',
+            ]);
+
+            // 5. RECORD PLATFORM FEE IN DEDICATED LEDGER TABLE
+            PlatformFee::create([
+                'user_id'        => $buyer->id,
+                'asset_id'       => $asset->id,
+                'source'         => 'secondary_market',
+                'amount'         => $platformFee,
+                'fee_percentage' => self::PLATFORM_FEE_PERCENT * 100,
             ]);
         });
 

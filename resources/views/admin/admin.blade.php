@@ -4,7 +4,7 @@
 @section('content')
     <div style="margin-bottom: 24px;">
         <h2>Admin Panel</h2>
-        <span class="muted">Platform administration and asset creation</span>
+        <span class="muted">Platform administration, revenue analytics, and asset management</span>
     </div>
 
     @if(session('success'))
@@ -13,7 +13,29 @@
         </div>
     @endif
 
-    <!-- System Stats -->
+    @if(session('error'))
+        <div style="padding: 12px; background: rgba(200, 0, 0, 0.1); border: 1px solid red; margin-bottom: 20px; border-radius: 6px;">
+            {{ session('error') }}
+        </div>
+    @endif
+
+    <!-- Platform Financial Metrics -->
+    <div class="grid grid-3" style="margin-bottom: 24px;">
+        <div class="card" style="border-left: 4px solid #ffd700;">
+            <div class="stat-label">Total Platform Fees Earned</div>
+            <div class="stat-value" style="color: #ffd700;">€{{ number_format($stats['total_fees_collected'] ?? 0, 2) }}</div>
+        </div>
+        <div class="card">
+            <div class="stat-label">Fees Collected Today</div>
+            <div class="stat-value">€{{ number_format($stats['today_fees'] ?? 0, 2) }}</div>
+        </div>
+        <div class="card">
+            <div class="stat-label">Total User Cash Balances</div>
+            <div class="stat-value">€{{ number_format($stats['total_user_balances'] ?? 0, 2) }}</div>
+        </div>
+    </div>
+
+    <!-- Platform User Stats -->
     <div class="grid grid-3" style="margin-bottom: 24px;">
         <div class="card">
             <div class="stat-label">Total Registered Users</div>
@@ -27,6 +49,39 @@
             <div class="stat-label">Total Transaction Volume</div>
             <div class="stat-value">€{{ number_format($stats['total_volume'] ?? 0, 2) }}</div>
         </div>
+    </div>
+
+    <!-- RECENT PLATFORM FEES TABLE -->
+    <div class="card" style="margin-bottom: 24px;">
+        <div class="section-title">Recent Fee Earnings</div>
+        <table style="width: 100%; text-align: left; border-collapse: collapse; margin-top: 12px;">
+            <thead>
+                <tr style="border-bottom: 1px solid var(--card-border);">
+                    <th style="padding: 10px 0;">User</th>
+                    <th>Asset</th>
+                    <th>Source</th>
+                    <th>Rate</th>
+                    <th>Amount Earned</th>
+                    <th>Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                @forelse($recentFees as $fee)
+                    <tr style="border-bottom: 1px solid var(--card-border);">
+                        <td style="padding: 10px 0;">{{ $fee->user->name ?? 'User #' . $fee->user_id }}</td>
+                        <td>{{ $fee->asset->title ?? 'N/A' }}</td>
+                        <td><span style="text-transform: capitalize;">{{ str_replace('_', ' ', $fee->source) }}</span></td>
+                        <td>{{ number_format($fee->fee_percentage, 1) }}%</td>
+                        <td style="color: #00e676; font-weight: bold;">+€{{ number_format($fee->amount, 2) }}</td>
+                        <td class="muted">{{ $fee->created_at->format('M d, Y H:i') }}</td>
+                    </tr>
+                @empty
+                    <tr>
+                        <td colspan="6" class="muted" style="text-align: center; padding: 15px 0;">No platform fees recorded yet.</td>
+                    </tr>
+                @endforelse
+            </tbody>
+        </table>
     </div>
 
     <!-- DISTRIBUTE PROFITS FORM -->

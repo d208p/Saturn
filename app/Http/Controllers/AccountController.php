@@ -20,6 +20,48 @@ class AccountController extends Controller
     {
         $user = Auth::user();
 
+        $stripeBankAccounts = [];
+        $payoutsReady = false;
+
+        if ($user->stripe_account_id) {
+            try {
+                $stripe = new StripeClient(config('services.stripe.secret'));
+
+                $account = $stripe->v2->core->accounts->retrieve(
+    $user->stripe_account_id,
+    ['include' => ['configuration.recipient']]
+);
+
+                $status = $account->configuration->recipient->capabilities
+                    ->stripe_balance->stripe_transfers->status ?? null;
+
+                $payoutsReady = $status === 'active';
+
+                if ($payoutsReady) {
+    $externalAccounts = $stripe->accounts->allExternalAccounts(
+        $user->stripe_account_id,
+        ['object' => 'bank_account', 'limit' => 10]
+    );
+
+    foreach ($externalAccounts->data as $ext) {
+        $stripeBankAccounts[] = [
+            'id' => $ext->id,
+            'bank_name' => $ext->bank_name ?: 'Bank account',
+            'last4' => $ext->last4,
+            'currency' => strtoupper($ext->currency),
+            'default_for_currency' => (bool) $ext->default_for_currency,
+        ];
+    }
+}
+            } catch (Throwable $e) {
+                Log::error('Failed to load Stripe payout info in AccountController.', [
+                    'user_id' => $user->id,
+                    'stripe_account_id' => $user->stripe_account_id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
         /*
          * Load the user's local bank accounts.
          *
@@ -32,9 +74,6 @@ class AccountController extends Controller
 
         /*
          * Load all active Laravel sessions belonging to this user.
-         *
-         * This requires the database session driver and a sessions
-         * table containing user_id.
          */
         $sessions = DB::table('sessions')
             ->where('user_id', $user->id)
@@ -44,6 +83,8 @@ class AccountController extends Controller
         return view('dashboard.account', [
             'user' => $user,
             'bankAccounts' => $bankAccounts,
+            'stripeBankAccounts' => $stripeBankAccounts,
+            'payoutsReady' => $payoutsReady,
             'sessions' => $sessions,
         ]);
     }

@@ -575,45 +575,34 @@
                 </div>
 
 
-                @forelse($bankAccounts as $bank)
+                @forelse($stripeBankAccounts as $bank)
 
-                    <div class="list-row">
+    <div class="list-row">
+        <div>
+            <div class="primary">
+                {{ $bank['bank_name'] }}
+            </div>
 
-                        <div>
+            <div class="secondary">
+                •••• {{ $bank['last4'] }}
+                ·
+                {{ $bank['currency'] }}
+            </div>
+        </div>
 
-                            <div class="primary">
-                                {{ $bank->bank_name }}
-                            </div>
+        @if($bank['default_for_currency'])
+            <span class="badge neutral">Primary</span>
+        @endif
+    </div>
 
-                            <div class="secondary">
-                                {{ $bank->masked_iban }}
-                                ·
-                                {{ $bank->currency }}
-                            </div>
+@empty
 
-                        </div>
+    <div class="muted" style="padding: 12px 0; font-size: 0.88rem;">
+        No bank accounts linked yet.
+        Click "Add bank account" above to connect your bank.
+    </div>
 
-                        @if($bank->is_primary)
-
-                            <span class="badge neutral">
-                                Primary
-                            </span>
-
-                        @endif
-
-                    </div>
-
-                @empty
-
-                    <div
-                        class="muted"
-                        style="padding: 12px 0; font-size: 0.88rem;"
-                    >
-                        No bank accounts linked yet.
-                        Click "Add bank account" above to connect your bank.
-                    </div>
-
-                @endforelse
+@endforelse
 
             </div>
 
@@ -641,7 +630,7 @@
                 </p>
 
 
-                @if($bankAccounts->count() > 0 && ($user->balance ?? 0) > 0)
+                @if(count($stripeBankAccounts) > 0 && ($user->balance ?? 0) > 0)
 
                     <a
                         href="{{ route('withdraw.show') }}"
