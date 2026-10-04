@@ -4,121 +4,117 @@ namespace App\Http\Controllers;
 
 use App\Models\Asset;
 use App\Models\Holding;
+use App\Models\PlatformFee;
 use App\Models\Transaction;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use App\Models\SellOrder;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class TradeController extends Controller
 {
-    public function show(Asset $asset)
+    /**
+     * Platform fee charged when buying newly-issued shares directly from
+     * the company (primary market). Distinct from the secondary market's
+     * 3.3% fee, which SecondaryMarketController handles separately.
+     */
+    const PLATFORM_FEE_PERCENT = 0.049; // 4.9%
+
+    public function show(Request $request, Asset $asset)
     {
-        $user = Auth::user();
-        $holding = Holding::where('user_id', $user->id)
-            ->where('asset_id', $asset->id)
-            ->first();
+        if ($request->wantsJson()) {
+            return response()->json([
+                'asset' => $asset,
+                'platform_fee_percent' => self::PLATFORM_FEE_PERCENT * 100,
+            ]);
+        }
 
-        $userShares = $holding ? $holding->shares_owned : 0;
-
-        return view('dashboard.trade', compact('asset', 'userShares'));
+        return view('dashboard.trade', compact('asset'));
     }
 
     public function store(Request $request, Asset $asset)
     {
         $request->validate([
-            'side' => 'required|in:buy,sell',
             'shares' => 'required|integer|min:1',
         ]);
 
-        $side = $request->side;
         $shares = (int) $request->shares;
         $userId = Auth::id();
 
-        return DB::transaction(function () use ($userId, $asset, $shares, $side) {
+        $result = DB::transaction(function () use ($userId, $asset, $shares) {
             $user = DB::table('users')->where('id', $userId)->lockForUpdate()->first();
             $lockedAsset = Asset::where('id', $asset->id)->lockForUpdate()->first();
 
-            $totalAmount = $shares * $lockedAsset->share_price;
-
-            if ($side === 'buy') {
-                if ($lockedAsset->status !== 'active') {
-                    return back()->withErrors(['trade' => 'This offering is not active.']);
-                }
-
-                if ($lockedAsset->available_shares < $shares) {
-                    return back()->withErrors(['trade' => 'Not enough available shares remaining.']);
-                }
-
-                if ($user->balance < $totalAmount) {
-                    return back()->withErrors(['trade' => 'Insufficient funds in account balance.']);
-                }
-
-                // Deduct balance and update asset shares
-                DB::table('users')->where('id', $userId)->decrement('balance', $totalAmount);
-                $lockedAsset->decrement('available_shares', $shares);
-
-                if ($lockedAsset->available_shares === 0) {
-                    $lockedAsset->update(['status' => 'funded']);
-                }
-
-                // Update holdings
-                $holding = Holding::firstOrNew([
-                    'user_id' => $userId,
-                    'asset_id' => $lockedAsset->id,
-                ]);
-
-                $holding->shares_owned += $shares;
-                $holding->total_invested += $totalAmount;
-                $holding->save();
-
-                // Log transaction
-                Transaction::create([
-                    'user_id' => $userId,
-                    'asset_id' => $lockedAsset->id,
-                    'type' => 'buy_equity',
-                    'amount' => $totalAmount,
-                    'shares' => $shares,
-                    'status' => 'completed',
-                ]);
-
-                return redirect('/portfolio#holdings')->with('success', 'Shares purchased successfully.');
-            } 
-            
-            if ($side === 'sell') {
-                $holding = Holding::where('user_id', $userId)
-                    ->where('asset_id', $lockedAsset->id)
-                    ->lockForUpdate()
-                    ->first();
-
-                if (!$holding || $holding->shares_owned < $shares) {
-                    return back()->withErrors(['trade' => 'You do not own enough shares to list for sale.']);
-                }
-
-                // 1. Reducem acțiunile disponibile ale vânzătorului (sunt blocate în ordinul de vânzare)
-                $holding->decrement('shares_owned', $shares);
-
-                // 2. Creăm ordinul pe piață secundară
-                SellOrder::create([
-                    'user_id' => $userId,
-                    'asset_id' => $lockedAsset->id,
-                    'shares' => $shares,
-                    'price_per_share' => $lockedAsset->share_price,
-                    'status' => 'active',
-                ]);
-
-                // 3. Înregistrăm intenția în jurnalul de tranzacții
-                Transaction::create([
-                    'user_id' => $userId,
-                    'asset_id' => $lockedAsset->id,
-                    'type' => 'sell_equity',
-                    'amount' => $totalAmount,
-                    'shares' => $shares,
-                    'status' => 'listed', // Statusul devine "listed" în loc de "completed"
-                ]);
-
-                return redirect('/portfolio#holdings')->with('success', 'Shares successfully listed on the secondary market.');
+            // NOTE: MarketController's "New Projects" query filters on
+            // status = 'funding', but this used to only accept 'active'.
+            // Accepting both here so investing doesn't silently fail —
+            // worth confirming which status your assets actually carry
+            // while they're open for investment.
+            if (!in_array($lockedAsset->status, ['funding', 'active'], true)) {
+                return ['error' => 'This offering is not open for investment.'];
             }
+
+            if ($lockedAsset->available_shares < $shares) {
+                return ['error' => 'Not enough available shares remaining.'];
+            }
+
+            $subtotal = $shares * $lockedAsset->share_price;
+            $platformFee = $subtotal * self::PLATFORM_FEE_PERCENT;
+            $totalCost = $subtotal + $platformFee;
+
+            if ($user->balance < $totalCost) {
+                return ['error' => 'Insufficient funds in account balance.'];
+            }
+
+            // Buyer pays subtotal + fee; the asset's available shares only
+            // move by the actual share count (the fee isn't "shares").
+            DB::table('users')->where('id', $userId)->decrement('balance', $totalCost);
+            $lockedAsset->decrement('available_shares', $shares);
+
+            if ($lockedAsset->available_shares === 0) {
+                $lockedAsset->update(['status' => 'funded']);
+            }
+
+            $holding = Holding::firstOrNew([
+                'user_id' => $userId,
+                'asset_id' => $lockedAsset->id,
+            ]);
+            $holding->shares_owned = ($holding->shares_owned ?? 0) + $shares;
+            $holding->total_invested = ($holding->total_invested ?? 0) + $subtotal;
+            $holding->save();
+
+            Transaction::create([
+                'user_id' => $userId,
+                'asset_id' => $lockedAsset->id,
+                'type' => 'buy_equity',
+                'amount' => $totalCost,
+                'shares' => $shares,
+                'status' => 'completed',
+            ]);
+
+            // Same ledger pattern as SecondaryMarketController, so both
+            // revenue streams show up together wherever fees are reported.
+            PlatformFee::create([
+                'user_id' => $userId,
+                'asset_id' => $lockedAsset->id,
+                'source' => 'primary_market',
+                'amount' => $platformFee,
+                'fee_percentage' => self::PLATFORM_FEE_PERCENT * 100,
+            ]);
+
+            return ['success' => true];
         });
+
+        if (isset($result['error'])) {
+            if ($request->wantsJson()) {
+                return response()->json(['message' => $result['error']], 422);
+            }
+            return back()->withErrors(['trade' => $result['error']]);
+        }
+
+        if ($request->wantsJson()) {
+            return response()->json(['message' => 'Shares purchased successfully.']);
+        }
+
+        return redirect('/portfolio#holdings')->with('success', 'Shares purchased successfully.');
     }
 }

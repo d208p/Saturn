@@ -17,7 +17,7 @@ use App\Http\Controllers\SecondaryMarketController;
 use App\Http\Controllers\ListingController;
 use App\Http\Controllers\DepositController;
 use App\Http\Controllers\WithdrawalController;
-use App\Http\Controllers\StripeWebHookController;
+use App\Http\Controllers\StripeWebhookController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -82,6 +82,12 @@ Route::middleware('auth')->group(function () {
         '/account/stripe/refresh',
         [AccountController::class, 'stripeOnboardingRefresh']
     )->name('account.stripe.refresh');
+
+    Route::get('/account/identity/start', [
+        AccountController::class,
+        'startIdentityVerification'
+    ])->name('account.identity.start');
+
     Route::post('/account/accreditation', [AccountController::class, 'requestAccreditation'])->name('account.accreditation');
     Route::delete('/account/session/{id}', [AccountController::class, 'logoutSession'])->name('account.session.destroy');
     Route::get('/secondary/asset/{asset}', [SecondaryMarketController::class, 'showAssetListings'])->name('secondary.asset.show');

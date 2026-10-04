@@ -36,13 +36,18 @@ class StripeWebhookController extends Controller
 
         try {
 
-            $event = Webhook::constructEvent(
-                $payload,
-                $signature,
-                $webhookSecret
-            );
+    $event = Webhook::constructEvent(
+        $payload,
+        $signature,
+        $webhookSecret
+    );
 
-        } catch (\UnexpectedValueException $e) {
+    Log::info('Stripe webhook received.', [
+        'event_id' => $event->id,
+        'event_type' => $event->type,
+    ]);
+
+} catch (\UnexpectedValueException $e) {
 
             Log::warning(
                 'Invalid Stripe webhook payload.'
@@ -76,62 +81,89 @@ class StripeWebhookController extends Controller
 
             switch ($event->type) {
 
-                /*
-                |--------------------------------------------------------------------------
-                | DEPOSITS
-                |--------------------------------------------------------------------------
-                */
+    /*
+    |--------------------------------------------------------------------------
+    | DEPOSITS
+    |--------------------------------------------------------------------------
+    */
 
-                case 'payment_intent.succeeded':
+    case 'payment_intent.succeeded':
 
-                    $this->handleSuccessfulPayment(
-                        $event->data->object
-                    );
+        $this->handleSuccessfulPayment(
+            $event->data->object
+        );
 
-                    break;
-
-
-                case 'payment_intent.payment_failed':
-
-                    $this->handleFailedPayment(
-                        $event->data->object
-                    );
-
-                    break;
+        break;
 
 
-                /*
-                |--------------------------------------------------------------------------
-                | WITHDRAWALS
-                |--------------------------------------------------------------------------
-                */
+    case 'payment_intent.payment_failed':
 
-                case 'payout.paid':
+        $this->handleFailedPayment(
+            $event->data->object
+        );
 
-                    $this->handlePayoutPaid(
-                        $event->data->object
-                    );
-
-                    break;
+        break;
 
 
-                case 'payout.failed':
+    /*
+    |--------------------------------------------------------------------------
+    | WITHDRAWALS
+    |--------------------------------------------------------------------------
+    */
 
-                    $this->handlePayoutFailed(
-                        $event->data->object
-                    );
+    case 'payout.paid':
 
-                    break;
+        $this->handlePayoutPaid(
+            $event->data->object
+        );
+
+        break;
 
 
-                case 'payout.canceled':
+    case 'payout.failed':
 
-                    $this->handlePayoutCanceled(
-                        $event->data->object
-                    );
+        $this->handlePayoutFailed(
+            $event->data->object
+        );
 
-                    break;
-            }
+        break;
+
+
+    case 'payout.canceled':
+
+        $this->handlePayoutCanceled(
+            $event->data->object
+        );
+
+        break;
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | IDENTITY VERIFICATION
+    |--------------------------------------------------------------------------
+    */
+
+    case 'identity.verification_session.verified':
+
+        $this->handleIdentityVerification(
+            $event->data->object
+        );
+
+        break;
+
+
+    case 'identity.verification_session.requires_input':
+
+        $this->handleIdentityVerificationRequiresInput(
+            $event->data->object
+        );
+
+        break;
+
+    default:
+        Log::info('Unhandled Stripe event type.', ['event_type' => $event->type]);
+}
 
 
             /*
@@ -684,4 +716,113 @@ class StripeWebhookController extends Controller
             $payout
         );
     }
+
+    /*
+|--------------------------------------------------------------------------
+| IDENTITY VERIFICATION — VERIFIED
+|--------------------------------------------------------------------------
+*/
+
+/**
+ * Stripe successfully verified the user's identity.
+ */
+private function handleIdentityVerification(
+    $verificationSession
+) {
+    $sessionId = $verificationSession->id;
+
+    $userId =
+        $verificationSession->metadata->saturn_user_id
+        ?? null;
+
+    Log::info('Stripe Identity verification received.', [
+        'verification_session_id' => $sessionId,
+        'saturn_user_id' => $userId,
+    ]);
+
+    if (!$userId) {
+        Log::warning(
+            'Stripe Identity verification has no Saturn user ID.',
+            [
+                'verification_session_id' => $sessionId,
+            ]
+        );
+
+        return;
+    }
+
+    DB::transaction(function () use (
+        $userId,
+        $sessionId
+    ) {
+
+        $user = DB::table('users')
+            ->where('id', $userId)
+            ->lockForUpdate()
+            ->first();
+
+        if (!$user) {
+            throw new \Exception(
+                'User not found: ' . $userId
+            );
+        }
+
+        DB::table('users')
+            ->where('id', $userId)
+            ->update([
+                'identity_verified' => true,
+                'selfie_verified' => true,
+                'kyc_status' => 'verified',
+                'stripe_identity_session_id' => $sessionId,
+                'updated_at' => now(),
+            ]);
+
+        Log::info(
+            'Saturn identity verification completed.',
+            [
+                'user_id' => $userId,
+                'verification_session_id' => $sessionId,
+            ]
+        );
+    });
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| IDENTITY VERIFICATION — REQUIRES INPUT
+|--------------------------------------------------------------------------
+*/
+
+/**
+ * Stripe requires the user to provide additional information.
+ */
+private function handleIdentityVerificationRequiresInput(
+    $verificationSession
+) {
+
+    $userId =
+        $verificationSession
+            ->metadata
+            ->saturn_user_id
+            ?? null;
+
+
+    Log::warning(
+        'Stripe Identity verification requires additional input.',
+        [
+            'user_id' =>
+                $userId,
+
+            'verification_session_id' =>
+                $verificationSession->id,
+
+            'last_error' =>
+                $verificationSession
+                    ->last_error
+                    ->reason
+                    ?? null,
+        ]
+    );
+}
 }

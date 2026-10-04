@@ -16,78 +16,185 @@ class AccountController extends Controller
     /**
      * Show account page.
      */
-    public function index()
+    public function index(Request $request)
     {
         $user = Auth::user();
 
         $stripeBankAccounts = [];
         $payoutsReady = false;
 
+        /*
+         * ---------------------------------------------------------
+         * Stripe recipient account
+         * ---------------------------------------------------------
+         */
         if ($user->stripe_account_id) {
             try {
-                $stripe = new StripeClient(config('services.stripe.secret'));
+                $stripe = new StripeClient(
+                    config('services.stripe.secret')
+                );
 
                 $account = $stripe->v2->core->accounts->retrieve(
-    $user->stripe_account_id,
-    ['include' => ['configuration.recipient']]
-);
+                    $user->stripe_account_id,
+                    [
+                        'include' => [
+                            'configuration.recipient',
+                        ],
+                    ]
+                );
 
-                $status = $account->configuration->recipient->capabilities
-                    ->stripe_balance->stripe_transfers->status ?? null;
+                $status = $account
+                    ->configuration
+                    ->recipient
+                    ->capabilities
+                    ->stripe_balance
+                    ->stripe_transfers
+                    ->status ?? null;
 
                 $payoutsReady = $status === 'active';
 
-                if ($payoutsReady) {
-    $externalAccounts = $stripe->accounts->allExternalAccounts(
-        $user->stripe_account_id,
-        ['object' => 'bank_account', 'limit' => 10]
-    );
 
-    foreach ($externalAccounts->data as $ext) {
-        $stripeBankAccounts[] = [
-            'id' => $ext->id,
-            'bank_name' => $ext->bank_name ?: 'Bank account',
-            'last4' => $ext->last4,
-            'currency' => strtoupper($ext->currency),
-            'default_for_currency' => (bool) $ext->default_for_currency,
-        ];
-    }
-}
+                /*
+                 * -------------------------------------------------
+                 * External bank accounts
+                 * -------------------------------------------------
+                 *
+                 * Stripe is the source of truth.
+                 */
+                if ($payoutsReady) {
+
+                    $externalAccounts =
+                        $stripe->accounts->allExternalAccounts(
+                            $user->stripe_account_id,
+                            [
+                                'object' => 'bank_account',
+                                'limit' => 10,
+                            ]
+                        );
+
+
+                    foreach ($externalAccounts->data as $ext) {
+
+                        $stripeBankAccounts[] = [
+                            'id' => $ext->id,
+
+                            'bank_name' =>
+                                $ext->bank_name ?: 'Bank account',
+
+                            'last4' =>
+                                $ext->last4,
+
+                            'currency' =>
+                                strtoupper($ext->currency),
+
+                            'default_for_currency' =>
+                                (bool) $ext->default_for_currency,
+                        ];
+                    }
+                }
+
             } catch (Throwable $e) {
-                Log::error('Failed to load Stripe payout info in AccountController.', [
-                    'user_id' => $user->id,
-                    'stripe_account_id' => $user->stripe_account_id,
-                    'error' => $e->getMessage(),
-                ]);
+
+                Log::error(
+                    'Failed to load Stripe payout info in AccountController.',
+                    [
+                        'user_id' =>
+                            $user->id,
+
+                        'stripe_account_id' =>
+                            $user->stripe_account_id,
+
+                        'error' =>
+                            $e->getMessage(),
+                    ]
+                );
             }
         }
 
+
         /*
-         * Load the user's local bank accounts.
+         * ---------------------------------------------------------
+         * Local bank accounts
+         * ---------------------------------------------------------
          *
-         * These are legacy/local records. Stripe is now the
-         * source of truth for the actual recipient bank account.
+         * These are legacy/local records.
+         * Stripe is the source of truth for the actual payout
+         * bank account.
          */
-        $bankAccounts = BankAccount::where('user_id', $user->id)
+        $bankAccounts = BankAccount::where(
+            'user_id',
+            $user->id
+        )
             ->latest()
             ->get();
 
+
         /*
-         * Load all active Laravel sessions belonging to this user.
+         * ---------------------------------------------------------
+         * Active Laravel sessions
+         * ---------------------------------------------------------
          */
         $sessions = DB::table('sessions')
-            ->where('user_id', $user->id)
+            ->where(
+                'user_id',
+                $user->id
+            )
             ->orderByDesc('last_activity')
             ->get();
 
-        return view('dashboard.account', [
-            'user' => $user,
-            'bankAccounts' => $bankAccounts,
-            'stripeBankAccounts' => $stripeBankAccounts,
-            'payoutsReady' => $payoutsReady,
-            'sessions' => $sessions,
-        ]);
+
+        /*
+         * ---------------------------------------------------------
+         * JSON response
+         * ---------------------------------------------------------
+         */
+        if ($request->wantsJson()) {
+
+            return response()->json([
+                'user' =>
+                    $user,
+
+                'bank_accounts' =>
+                    $bankAccounts,
+
+                'stripe_bank_accounts' =>
+                    $stripeBankAccounts,
+
+                'payouts_ready' =>
+                    $payoutsReady,
+
+                'sessions' =>
+                    $sessions,
+            ]);
+        }
+
+
+        /*
+         * ---------------------------------------------------------
+         * Blade view
+         * ---------------------------------------------------------
+         */
+        return view(
+            'dashboard.account',
+            [
+                'user' =>
+                    $user,
+
+                'bankAccounts' =>
+                    $bankAccounts,
+
+                'stripeBankAccounts' =>
+                    $stripeBankAccounts,
+
+                'payoutsReady' =>
+                    $payoutsReady,
+
+                'sessions' =>
+                    $sessions,
+            ]
+        );
     }
+
 
     /**
      * Update profile information.
@@ -102,26 +209,31 @@ class AccountController extends Controller
                 'string',
                 'max:255',
             ],
+
             'email' => [
                 'required',
                 'email',
                 'max:255',
                 'unique:users,email,' . $user->id,
             ],
+
             'phone' => [
                 'nullable',
                 'string',
                 'max:50',
             ],
+
             'dob' => [
                 'nullable',
                 'date',
             ],
+
             'country' => [
                 'nullable',
                 'string',
                 'max:100',
             ],
+
             'address' => [
                 'nullable',
                 'string',
@@ -129,30 +241,47 @@ class AccountController extends Controller
             ],
         ]);
 
-        $user->name = $validated['name'];
-        $user->email = $validated['email'];
+
+        $user->name =
+            $validated['name'];
+
+        $user->email =
+            $validated['email'];
+
 
         /*
-         * These fields exist in your current account Blade.
-         * Only assign them if your users table contains them.
+         * These fields are present in the Blade.
          */
         if (array_key_exists('phone', $validated)) {
-            $user->phone = $validated['phone'];
+
+            $user->phone =
+                $validated['phone'];
         }
+
 
         if (array_key_exists('dob', $validated)) {
-            $user->dob = $validated['dob'];
+
+            $user->dob =
+                $validated['dob'];
         }
+
 
         if (array_key_exists('country', $validated)) {
-            $user->country = $validated['country'];
+
+            $user->country =
+                $validated['country'];
         }
+
 
         if (array_key_exists('address', $validated)) {
-            $user->address = $validated['address'];
+
+            $user->address =
+                $validated['address'];
         }
 
+
         $user->save();
+
 
         return back()->with(
             'success',
@@ -160,24 +289,18 @@ class AccountController extends Controller
         );
     }
 
+
     /**
      * Update account password.
      */
     public function updatePassword(Request $request)
     {
-        /*
-         * Your Blade uses:
-         *
-         * new_password
-         * new_password_confirmation
-         *
-         * so the controller must validate those names.
-         */
         $validated = $request->validate([
             'current_password' => [
                 'required',
                 'current_password',
             ],
+
             'new_password' => [
                 'required',
                 'confirmed',
@@ -185,7 +308,9 @@ class AccountController extends Controller
             ],
         ]);
 
+
         $user = Auth::user();
+
 
         $user->password = Hash::make(
             $validated['new_password']
@@ -193,145 +318,219 @@ class AccountController extends Controller
 
         $user->save();
 
+
         return back()->with(
             'success',
             'Password updated successfully.'
         );
     }
 
+
     /**
- * Start Stripe recipient onboarding.
- *
- * Stripe hosts the onboarding flow and collects the
- * recipient's identity and bank-account information.
- *
- * Saturn does NOT collect the raw IBAN.
- */
-public function startStripeOnboarding()
-{
-    $user = Auth::user();
+     * Start Stripe recipient onboarding.
+     *
+     * Stripe hosts the onboarding flow and collects
+     * the recipient's required information and bank account.
+     *
+     * Saturn does not collect the raw IBAN.
+     */
+    public function startStripeOnboarding()
+    {
+        $user = Auth::user();
 
-    try {
-        $stripe = new StripeClient(
-            config('services.stripe.secret')
-        );
 
-        /*
-         * Create the Stripe recipient account only once.
-         */
-        if (!$user->stripe_account_id) {
+        try {
 
-        $country = strtolower($user->country ?? 'RO');
+            $stripe = new StripeClient(
+                config('services.stripe.secret')
+            );
 
-            $account = $stripe->v2->core->accounts->create([
-                'contact_email' => $user->email,
 
-                'dashboard' => 'none',
+            /*
+             * -----------------------------------------------------
+             * Create Stripe recipient account once.
+             * -----------------------------------------------------
+             */
+            if (!$user->stripe_account_id) {
 
-                'identity' => [
-                    'country' => $country,
-                ],
+                /*
+                 * Stripe expects a two-letter ISO country code.
+                 */
+                $country = strtoupper(
+                    $user->country ?? 'RO'
+                );
 
-                'defaults' => [
-                    'responsibilities' => [
-                        'losses_collector' => 'application',
-                        'fees_collector' => 'application',
-                    ],
-                ],
 
-                'configuration' => [
-                    'recipient' => [
-                        'capabilities' => [
-                            'stripe_balance' => [
-                                'stripe_transfers' => [
-                                    'requested' => true,
+                /*
+                 * If the database contains "Romania",
+                 * convert it to RO.
+                 */
+                $countryMap = [
+                    'ROMANIA' => 'RO',
+                    'ITALY' => 'IT',
+                    'FRANCE' => 'FR',
+                    'SPAIN' => 'ES',
+                ];
+
+
+                if (isset($countryMap[$country])) {
+
+                    $country =
+                        $countryMap[$country];
+                }
+
+
+                /*
+                 * Safety fallback.
+                 */
+                if (!preg_match('/^[A-Z]{2}$/', $country)) {
+
+                    $country = 'RO';
+                }
+
+
+                $account =
+                    $stripe->v2->core->accounts->create([
+                        'contact_email' =>
+                            $user->email,
+
+                        'dashboard' =>
+                            'none',
+
+                        'identity' => [
+                            'country' =>
+                                $country,
+                        ],
+
+                        'defaults' => [
+                            'responsibilities' => [
+                                'losses_collector' =>
+                                    'application',
+
+                                'fees_collector' =>
+                                    'application',
+                            ],
+                        ],
+
+                        'configuration' => [
+                            'recipient' => [
+                                'capabilities' => [
+                                    'stripe_balance' => [
+                                        'stripe_transfers' => [
+                                            'requested' =>
+                                                true,
+                                        ],
+                                    ],
                                 ],
                             ],
                         ],
-                    ],
-                ],
 
-                'metadata' => [
-                    'saturn_user_id' => (string) $user->id,
-                ],
+                        'metadata' => [
+                            'saturn_user_id' =>
+                                (string) $user->id,
+                        ],
 
-                'include' => [
-                    'configuration.recipient',
-                ],
-            ]);
+                        'include' => [
+                            'configuration.recipient',
+                        ],
+                    ]);
+
+
+                /*
+                 * Save Stripe account ID.
+                 */
+                $user->stripe_account_id =
+                    $account->id;
+
+                $user->save();
+            }
+
 
             /*
-             * Store the Stripe connected account ID
-             * in Saturn's users table.
+             * -----------------------------------------------------
+             * Create / refresh Stripe hosted onboarding link.
+             * -----------------------------------------------------
              */
-            $user->stripe_account_id = $account->id;
-            $user->save();
-        }
+            $accountLink =
+                $stripe->v2->core->accountLinks->create([
+                    'account' =>
+                        $user->stripe_account_id,
 
-        /*
-         * Create a Stripe-hosted onboarding link.
-         */
-        $accountLink = $stripe->v2->core->accountLinks->create([
-            'account' => $user->stripe_account_id,
+                    'use_case' => [
+                        'type' =>
+                            'account_onboarding',
 
-            'use_case' => [
-                'type' => 'account_onboarding',
+                        'account_onboarding' => [
+                            'configurations' => [
+                                'recipient',
+                            ],
 
-                'account_onboarding' => [
-                    'configurations' => [
-                        'recipient',
+                            'refresh_url' =>
+                                route(
+                                    'account.stripe.onboarding'
+                                ),
+
+                            'return_url' =>
+                                route(
+                                    'account.stripe.return'
+                                ),
+                        ],
                     ],
+                ]);
 
-                    'refresh_url' => route(
-                        'account.stripe.onboarding'
-                    ),
 
-                    'return_url' => route(
-                        'account.stripe.return'
-                    ),
-                ],
-            ],
-        ]);
+            /*
+             * Send user to Stripe.
+             */
+            return redirect()->away(
+                $accountLink->url
+            );
 
-        /*
-         * Send the user to Stripe's hosted onboarding page.
-         */
-        return redirect()->away(
-            $accountLink->url
-        );
+        } catch (Throwable $e) {
 
-    } catch (Throwable $e) {
+            Log::error(
+                'Stripe recipient onboarding failed.',
+                [
+                    'user_id' =>
+                        $user->id,
 
-        Log::error(
-            'Stripe recipient onboarding failed.',
-            [
-                'user_id' => $user->id,
-                'stripe_account_id' => $user->stripe_account_id,
-                'exception_class' => get_class($e),
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-            ]
-        );
+                    'stripe_account_id' =>
+                        $user->stripe_account_id,
 
-        /*
-         * TEMPORARY:
-         * Show the actual Stripe error while we are developing.
-         */
-        return back()->with(
-            'error',
-            'Stripe error: ' . $e->getMessage()
-        );
+                    'exception_class' =>
+                        get_class($e),
+
+                    'error' =>
+                        $e->getMessage(),
+
+                    'trace' =>
+                        $e->getTraceAsString(),
+                ]
+            );
+
+
+            return back()->with(
+                'error',
+                'Stripe error: ' . $e->getMessage()
+            );
+        }
     }
-}
+
 
     /**
      * Stripe returns the user here after onboarding.
+     *
+     * IMPORTANT:
+     * Returning from Stripe does NOT automatically mean
+     * the bank account and transfers capability are ready.
      */
     public function stripeOnboardingReturn()
     {
         $user = Auth::user();
 
+
         if (!$user->stripe_account_id) {
+
             return redirect()
                 ->route('account.index')
                 ->with(
@@ -340,37 +539,114 @@ public function startStripeOnboarding()
                 );
         }
 
+
         try {
+
             $stripe = new StripeClient(
                 config('services.stripe.secret')
             );
 
+
             /*
-             * Retrieve the account from Stripe.
+             * Retrieve the Stripe recipient account.
              */
-            $stripe->v2->core->accounts->retrieve(
-                $user->stripe_account_id,
-                [
-                    'include' => [
-                        'configuration.recipient',
-                    ],
-                ]
-            );
+            $account =
+                $stripe->v2->core->accounts->retrieve(
+                    $user->stripe_account_id,
+                    [
+                        'include' => [
+                            'configuration.recipient',
+                        ],
+                    ]
+                );
+
+
+            /*
+             * Check the actual transfers capability.
+             */
+            $status =
+                $account
+                    ->configuration
+                    ->recipient
+                    ->capabilities
+                    ->stripe_balance
+                    ->stripe_transfers
+                    ->status
+                    ?? null;
+
+
+            /*
+             * Check actual external bank accounts.
+             */
+            $externalAccounts =
+                $stripe->accounts->allExternalAccounts(
+                    $user->stripe_account_id,
+                    [
+                        'object' => 'bank_account',
+                        'limit' => 10,
+                    ]
+                );
+
+
+            $hasBankAccount =
+                count($externalAccounts->data) > 0;
+
 
             Log::info(
                 'Stripe recipient onboarding returned.',
                 [
-                    'user_id' => $user->id,
+                    'user_id' =>
+                        $user->id,
+
                     'stripe_account_id' =>
                         $user->stripe_account_id,
+
+                    'transfers_status' =>
+                        $status,
+
+                    'has_bank_account' =>
+                        $hasBankAccount,
                 ]
             );
 
+
+            /*
+             * Stripe onboarding returned but
+             * no bank account was attached.
+             */
+            if (!$hasBankAccount) {
+
+                return redirect()
+                    ->route('account.index')
+                    ->with(
+                        'error',
+                        'Stripe setup was opened, but no bank account was connected.'
+                    );
+            }
+
+
+            /*
+             * Bank exists but transfers are not active.
+             */
+            if ($status !== 'active') {
+
+                return redirect()
+                    ->route('account.index')
+                    ->with(
+                        'error',
+                        'Your bank account was added, but Stripe has not enabled withdrawals yet.'
+                    );
+            }
+
+
+            /*
+             * Everything is ready.
+             */
             return redirect()
                 ->route('account.index')
                 ->with(
                     'success',
-                    'Bank account setup was completed through Stripe.'
+                    'Bank account connected successfully. Withdrawals are now available.'
                 );
 
         } catch (Throwable $e) {
@@ -378,24 +654,30 @@ public function startStripeOnboarding()
             Log::error(
                 'Stripe onboarding return failed.',
                 [
-                    'user_id' => $user->id,
+                    'user_id' =>
+                        $user->id,
+
                     'stripe_account_id' =>
                         $user->stripe_account_id,
-                    'error' => $e->getMessage(),
+
+                    'error' =>
+                        $e->getMessage(),
                 ]
             );
+
 
             return redirect()
                 ->route('account.index')
                 ->with(
                     'error',
-                    'Unable to verify your Stripe account setup.'
+                    'Unable to verify your Stripe bank-account setup.'
                 );
         }
     }
 
+
     /**
-     * Re-create a Stripe onboarding link.
+     * Refresh Stripe onboarding.
      */
     public function stripeOnboardingRefresh()
     {
@@ -404,6 +686,122 @@ public function startStripeOnboarding()
         );
     }
 
+
+    /**
+     * Start Stripe Identity verification.
+     */
+    public function startIdentityVerification(
+        Request $request
+    ) {
+        $user = Auth::user();
+
+
+        try {
+
+            $stripe = new StripeClient(
+                config('services.stripe.secret')
+            );
+
+
+            /*
+             * Create Stripe Identity session.
+             */
+            $session =
+                $stripe
+                    ->identity
+                    ->verificationSessions
+                    ->create([
+                        'type' =>
+                            'document',
+
+                        'client_reference_id' =>
+                            (string) $user->id,
+
+                        'provided_details' => [
+                            'email' =>
+                                $user->email,
+
+                            'phone' =>
+                                $user->phone ?: null,
+                        ],
+
+                        'options' => [
+                            'document' => [
+                                'require_matching_selfie' =>
+                                    true,
+                            ],
+                        ],
+
+                        'metadata' => [
+                            'saturn_user_id' =>
+                                (string) $user->id,
+                        ],
+
+                        'return_url' =>
+                            route('account.index'),
+                    ]);
+
+
+            /*
+             * Store the session ID.
+             */
+            $user->stripe_identity_session_id =
+                $session->id;
+
+            $user->save();
+
+
+            /*
+             * JSON for Flutter/API consumers.
+             */
+            if ($request->wantsJson()) {
+
+                return response()->json([
+                    'url' =>
+                        $session->url,
+                ]);
+            }
+
+
+            /*
+             * Browser flow.
+             */
+            return redirect()->away(
+                $session->url
+            );
+
+        } catch (Throwable $e) {
+
+            Log::error(
+                'Stripe Identity verification session creation failed.',
+                [
+                    'user_id' =>
+                        $user->id,
+
+                    'error' =>
+                        $e->getMessage(),
+                ]
+            );
+
+
+            if ($request->wantsJson()) {
+
+                return response()->json([
+                    'message' =>
+                        'Could not start identity verification.',
+                ], 500);
+            }
+
+
+            return back()->with(
+                'error',
+                'Could not start identity verification: ' .
+                $e->getMessage()
+            );
+        }
+    }
+
+
     /**
      * Request accreditation.
      */
@@ -411,10 +809,12 @@ public function startStripeOnboarding()
     {
         $user = Auth::user();
 
+
         /*
-         * Keep your existing accreditation logic here
-         * when you implement it.
+         * Keep existing accreditation logic here
+         * when implemented.
          */
+
 
         return back()->with(
             'success',
@@ -422,42 +822,58 @@ public function startStripeOnboarding()
         );
     }
 
+
     /**
      * Log out another active session.
      */
     public function logoutSession($id)
     {
-        $currentSessionId = request()->session()->getId();
+        $currentSessionId =
+            request()->session()->getId();
+
 
         /*
-         * Never allow the current session to be destroyed
-         * through this endpoint.
+         * Never allow the current session
+         * to be destroyed through this endpoint.
          */
         if ($id === $currentSessionId) {
+
             return back()->with(
                 'error',
                 'You cannot log out the current session here.'
             );
         }
 
-        /*
-         * Only delete sessions belonging to the authenticated user.
-         */
-        $deleted = DB::table('sessions')
-            ->where('id', $id)
-            ->where('user_id', Auth::id())
-            ->delete();
 
-        if ($deleted === 0) {
+        /*
+         * Only delete sessions belonging
+         * to the authenticated user.
+         */
+        $deleted =
+            DB::table('sessions')
+                ->where(
+                    'id',
+                    $id
+                )
+                ->where(
+                    'user_id',
+                    Auth::id()
+                )
+                ->delete();
+
+
+        if (!$deleted) {
+
             return back()->with(
                 'error',
-                'Session not found.'
+                'Session not found or already logged out.'
             );
         }
 
+
         return back()->with(
             'success',
-            'Session logged out.'
+            'Session logged out successfully.'
         );
     }
 }
