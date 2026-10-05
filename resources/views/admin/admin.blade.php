@@ -112,37 +112,108 @@
     </div>
 
     <!-- Create New Opportunity Form -->
-    <div class="card" style="margin-bottom: 24px;">
-        <div class="section-title">Emit New Investment Opportunity</div>
-        <form action="{{ route('admin.assets.store') }}" method="POST" style="display: grid; gap: 16px; margin-top: 16px;">
-            @csrf
-            <div>
-                <label>Title</label>
-                <input type="text" name="title" required style="width: 100%; padding: 8px;">
-            </div>
-            <div>
-                <label>Category</label>
-                <input type="text" name="category" placeholder="e.g. Hospitality, Energy" required style="width: 100%; padding: 8px;">
-            </div>
-            <div>
-                <label>Valuation (€)</label>
-                <input type="number" step="0.01" name="total_valuation" required style="width: 100%; padding: 8px;">
-            </div>
-            <div>
-                <label>Total Shares</label>
-                <input type="number" name="total_shares" required style="width: 100%; padding: 8px;">
-            </div>
-            <div>
-                <label>Share Price (€)</label>
-                <input type="number" step="0.01" name="share_price" required style="width: 100%; padding: 8px;">
-            </div>
-            <div>
-                <label>Description</label>
-                <textarea name="description" style="width: 100%; padding: 8px;"></textarea>
-            </div>
-            <button type="submit" style="padding: 10px 16px; cursor: pointer;">Emit Opportunity</button>
-        </form>
-    </div>
+<div class="card" style="margin-bottom: 24px;">
+    <div class="section-title">Emit New Investment Opportunity</div>
+
+    <form
+        action="{{ route('admin.assets.store') }}"
+        method="POST"
+        enctype="multipart/form-data"
+        style="display: grid; gap: 16px; margin-top: 16px;"
+    >
+        @csrf
+
+        <div>
+            <label>Title</label>
+            <input
+                type="text"
+                name="title"
+                required
+                style="width: 100%; padding: 8px;"
+            >
+        </div>
+
+        <div>
+            <label>Category</label>
+            <input
+                type="text"
+                name="category"
+                placeholder="e.g. Hospitality, Energy"
+                required
+                style="width: 100%; padding: 8px;"
+            >
+        </div>
+
+        <div>
+            <label>Country</label>
+            <input
+                type="text"
+                name="country"
+                placeholder="e.g. Romania"
+                required
+                style="width: 100%; padding: 8px;"
+            >
+        </div>
+
+        <div>
+            <label>Place Image</label>
+            <input
+                type="file"
+                name="image"
+                accept="image/jpeg,image/png,image/webp"
+                required
+                style="width: 100%; padding: 8px;"
+            >
+        </div>
+
+        <div>
+            <label>Valuation (€)</label>
+            <input
+                type="number"
+                step="0.01"
+                name="total_valuation"
+                required
+                style="width: 100%; padding: 8px;"
+            >
+        </div>
+
+        <div>
+            <label>Total Shares</label>
+            <input
+                type="number"
+                name="total_shares"
+                required
+                style="width: 100%; padding: 8px;"
+            >
+        </div>
+
+        <div>
+            <label>Share Price (€)</label>
+            <input
+                type="number"
+                step="0.01"
+                name="share_price"
+                required
+                style="width: 100%; padding: 8px;"
+            >
+        </div>
+
+        <div>
+            <label>Description</label>
+            <textarea
+                name="description"
+                style="width: 100%; padding: 8px;"
+            ></textarea>
+        </div>
+
+        <button
+            type="submit"
+            style="padding: 10px 16px; cursor: pointer;"
+        >
+            Emit Opportunity
+        </button>
+    </form>
+</div>
 
     <!-- Active Opportunities List -->
     <div class="card">

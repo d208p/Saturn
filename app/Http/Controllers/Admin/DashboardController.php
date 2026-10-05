@@ -7,6 +7,7 @@ use App\Models\Asset;
 use App\Models\Holding;
 use App\Models\PlatformFee;
 use App\Models\Transaction;
+use Illuminate\Support\Facades\Storage;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -86,11 +87,15 @@ class DashboardController extends Controller
         $validated = $request->validate([
             'title'           => 'required|string|max:255',
             'category'        => 'required|string|max:255',
+            'country'         => 'required|string|max:255',
             'description'     => 'nullable|string',
             'total_valuation' => 'required|numeric|min:0',
             'total_shares'    => 'required|integer|min:1',
             'share_price'     => 'required|numeric|min:0',
+            'image'           => 'required|image|mimes:jpeg,png,jpg,webp|max:10240',
         ]);
+
+        $validated['image'] = $request->file('image')->store('assets', 'public');
 
         $validated['available_shares'] = $validated['total_shares'];
         $validated['status'] = 'active';

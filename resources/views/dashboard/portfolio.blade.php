@@ -123,10 +123,26 @@
 
                 <div class="card">
                     <div class="section-title">Geographic allocation</div>
-                    <div class="allocation-row">
-                        <div class="top"><span>Romania</span><span>100%</span></div>
-                        <div class="allocation-bar"><div class="allocation-fill" style="width: 100%;"></div></div>
-                    </div>
+
+                    @forelse($geographicAllocation as $allocation)
+                        <div class="allocation-row">
+                            <div class="top">
+                                <span>{{ $allocation['country'] }}</span>
+                                <span>{{ $allocation['percentage'] }}%</span>
+                            </div>
+
+                            <div class="allocation-bar">
+                                <div
+                                    class="allocation-fill"
+                                    style="width: {{ min($allocation['percentage'], 100) }}%;"
+                                ></div>
+                            </div>
+                        </div>
+                    @empty
+                        <p class="muted" style="font-size: 0.85rem;">
+                            No holdings available to calculate geographic allocation.
+                        </p>
+                    @endforelse
                 </div>
             </div>
         </div>

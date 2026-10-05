@@ -9,6 +9,8 @@ class Asset extends Model
     protected $fillable = [
         'title',
         'category',
+        'country',
+        'image',
         'description',
         'total_valuation',
         'total_shares',

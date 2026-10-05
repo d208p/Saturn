@@ -17,6 +17,7 @@ use App\Http\Controllers\SecondaryMarketController;
 use App\Http\Controllers\ListingController;
 use App\Http\Controllers\DepositController;
 use App\Http\Controllers\WithdrawalController;
+use App\Http\Controllers\PortfolioController;
 use App\Http\Controllers\StripeWebhookController;
 
 Route::get('/', function () {
@@ -51,13 +52,7 @@ Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])
 
 // Authenticated group
 Route::middleware('auth')->group(function () {
-    // Dynamic Portfolio Route
-    Route::get('/portfolio', function () {
-        $user = Auth::user()->load('holdings.asset');
-        return view('dashboard.portfolio', compact('user'));
-    })->name('portfolio');
-
-    // Static View Routes
+    Route::get('/portfolio', [PortfolioController::class, 'index'])->name('portfolio');
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/market', [MarketController::class, 'index'])->name('market');
     Route::get('/asset/{asset}', [AssetController::class, 'show'])->name('asset.show');
