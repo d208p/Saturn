@@ -4,10 +4,10 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Asset;
+use App\Models\BuyoutProposal;
 use App\Models\Holding;
 use App\Models\PlatformFee;
 use App\Models\Transaction;
-use Illuminate\Support\Facades\Storage;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -17,16 +17,14 @@ class DashboardController extends Controller
     public function index()
     {
         $stats = [
-            'total_users'         => User::count(),
-            'total_assets'        => Asset::count(),
-            'total_volume'        => Transaction::sum('amount'),
-            // Fee & Financial Metrics
-            'total_fees_collected'=> PlatformFee::sum('amount'),
-            'today_fees'          => PlatformFee::whereDate('created_at', today())->sum('amount'),
-            'total_user_balances' => User::sum('balance'),
+            'total_users'          => User::count(),
+            'total_assets'         => Asset::count(),
+            'total_volume'         => Transaction::sum('amount'),
+            'total_fees_collected' => PlatformFee::sum('amount'),
+            'today_fees'           => PlatformFee::whereDate('created_at', today())->sum('amount'),
+            'total_user_balances'  => User::sum('balance'),
         ];
 
-        // Fetch recent fee logs with relationships
         $recentFees = PlatformFee::with(['user', 'asset'])
             ->latest()
             ->take(10)
@@ -34,7 +32,104 @@ class DashboardController extends Controller
 
         $assets = Asset::latest()->get();
 
-        return view('admin.admin', compact('stats', 'assets', 'recentFees'));
+        // Load active buyout proposals for admin management
+        $buyoutProposals = BuyoutProposal::with('asset')
+            ->latest()
+            ->get();
+
+        return view('admin.admin', compact('stats', 'assets', 'recentFees', 'buyoutProposals'));
+    }
+
+    /**
+     * Create a buyout proposal (Initiated by corporate buyer).
+     */
+    public function createBuyoutProposal(Request $request)
+    {
+        $validated = $request->validate([
+            'asset_id'       => 'required|exists:assets,id',
+            'buyer_name'     => 'required|string|max:255',
+            'offered_amount' => 'required|numeric|min:0.01',
+            'voting_days'    => 'required|integer|min:1|max:30',
+        ]);
+
+        BuyoutProposal::create([
+            'asset_id'       => $validated['asset_id'],
+            'buyer_name'     => $validated['buyer_name'],
+            'offered_amount' => $validated['offered_amount'],
+            'voting_ends_at' => now()->addDays((int) $validated['voting_days']),
+            'status'         => 'voting',
+        ]);
+
+        return back()->with('success', 'Corporate buyout offer listed and voting opened.');
+    }
+
+    /**
+     * Execute final payout for an approved buyout.
+     */
+    public function approveBuyout(BuyoutProposal $proposal)
+    {
+        if (!in_array($proposal->status, ['approved_pending_payout', 'voting'])) {
+            return back()->with('error', 'This proposal cannot be executed.');
+        }
+
+        $asset = $proposal->asset;
+        $totalShares = $asset->total_shares;
+        
+        // Ensure 66% threshold condition is met
+        $yesPercent = ($proposal->totalYesVotes() / $totalShares) * 100;
+        if ($yesPercent < 66.0 && now()->lessThan($proposal->voting_ends_at)) {
+            return back()->with('error', 'Buyout threshold (66%) has not been reached yet.');
+        }
+
+        $grossAmount = (float) $proposal->offered_amount;
+        $platformFeeAmount = $grossAmount * 0.01; // 1% platform fee
+        $netPayoutPool = $grossAmount - $platformFeeAmount;
+
+        DB::transaction(function () use ($proposal, $asset, $totalShares, $grossAmount, $platformFeeAmount, $netPayoutPool) {
+            // 1. Log 1% Platform Fee
+            PlatformFee::create([
+                'user_id'        => auth()->id(),
+                'asset_id'       => $asset->id,
+                'source'         => 'buyout_fee',
+                'fee_percentage' => 1.0,
+                'amount'         => $platformFeeAmount,
+            ]);
+
+            // 2. Distribute net proceeds proportionally to shareholders
+            $holdings = Holding::where('asset_id', $asset->id)->where('shares_owned', '>', 0)->get();
+
+            foreach ($holdings as $holding) {
+                $userShareRatio = $holding->shares_owned / $totalShares;
+                $userPayout = $netPayoutPool * $userShareRatio;
+
+                $user = User::find($holding->user_id);
+                if ($user) {
+                    $user->increment('balance', $userPayout);
+
+                    Transaction::create([
+                        'user_id'  => $user->id,
+                        'asset_id' => $asset->id,
+                        'type'     => 'distribution',
+                        'amount'   => $userPayout,
+                        'shares'   => $holding->shares_owned,
+                        'status'   => 'completed',
+                    ]);
+                }
+
+                // Clear holding record
+                $holding->delete();
+            }
+
+            // 3. Mark asset as closed & proposal as completed
+            $asset->update([
+                'status'           => 'closed',
+                'available_shares' => 0,
+            ]);
+
+            $proposal->update(['status' => 'completed']);
+        });
+
+        return back()->with('success', "Buyout executed. Net proceeds of €" . number_format($netPayoutPool, 2) . " distributed to shareholders (1% fee logged).");
     }
 
     public function distributeProfit(Request $request)
@@ -59,7 +154,7 @@ class DashboardController extends Controller
             ->where('shares_owned', '>', 0)
             ->get();
 
-        DB::transaction(function () use ($holdings, $profitPerShare, $asset) {
+        DB::transaction(function () use ($holdings, $profitPerShare, $asset, $totalProfit) {
             foreach ($holdings as $holding) {
                 $userProfit = $holding->shares_owned * $profitPerShare;
 
@@ -70,7 +165,7 @@ class DashboardController extends Controller
                     Transaction::create([
                         'user_id'  => $user->id,
                         'asset_id' => $asset->id,
-                        'type'     => 'income',
+                        'type'     => 'distribution',
                         'amount'   => $userProfit,
                         'shares'   => $holding->shares_owned,
                         'status'   => 'completed',
@@ -95,7 +190,8 @@ class DashboardController extends Controller
             'image'           => 'required|image|mimes:jpeg,png,jpg,webp|max:10240',
         ]);
 
-        $validated['image'] = $request->file('image')->store('assets', 'public');
+        $validated['image_path'] = $request->file('image')->store('assets', 'public');
+        unset($validated['image']);
 
         $validated['available_shares'] = $validated['total_shares'];
         $validated['status'] = 'active';

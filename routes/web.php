@@ -19,6 +19,7 @@ use App\Http\Controllers\DepositController;
 use App\Http\Controllers\WithdrawalController;
 use App\Http\Controllers\PortfolioController;
 use App\Http\Controllers\StripeWebhookController;
+use App\Http\Controllers\BuyoutController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -92,17 +93,17 @@ Route::middleware('auth')->group(function () {
     Route::post('/listings/{sellOrder}/cancel', [ListingController::class, 'cancel'])->name('listings.cancel');
     Route::get('/deposit', [DepositController::class, 'show'])
         ->name('deposit.show');
-
     Route::post('/deposit/create-payment-intent', [DepositController::class, 'createPaymentIntent'])
         ->name('deposit.createPaymentIntent');
-
-    // withdraw cash
     Route::get('/withdraw', [WithdrawalController::class, 'show'])->name('withdraw.show');
     Route::post('/withdraw', [WithdrawalController::class, 'process'])->name('withdraw.process');
+    Route::post('/buyout/{proposal}/vote', [BuyoutController::class, 'vote'])->name('buyout.vote');
 });
 
 Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/', [AdminDashboardController::class, 'index'])->name('dashboard');
     Route::post('/assets', [AdminDashboardController::class, 'storeAsset'])->name('assets.store');
     Route::post('/assets/distribute', [AdminDashboardController::class, 'distributeProfit'])->name('assets.distribute');
+    Route::post('/buyouts/create', [AdminDashboardController::class, 'createBuyoutProposal'])->name('buyout.create');
+    Route::post('/buyouts/{proposal}/approve', [AdminDashboardController::class, 'approveBuyout'])->name('buyout.approve');
 });

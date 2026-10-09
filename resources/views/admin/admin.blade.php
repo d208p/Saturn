@@ -111,6 +111,103 @@
         </form>
     </div>
 
+    <!-- CREATE BUYOUT OFFER FORM -->
+<div class="card" style="margin-bottom: 24px;">
+    <div class="section-title">List Corporate Buyout Offer</div>
+    <p class="muted" style="font-size: 0.85rem; margin-bottom: 16px;">
+        Initiate a corporate buyout voting process for an asset. Shareholder voting will be share-weighted (66% threshold to pass).
+    </p>
+    <form action="{{ route('admin.buyout.create') }}" method="POST" style="display: grid; gap: 16px;">
+        @csrf
+        <div>
+            <label>Select Asset</label>
+            <select name="asset_id" required style="width: 100%; padding: 8px; background: rgba(0,0,0,0.2); border: 1px solid var(--card-border); color: #fff; border-radius: 6px;">
+                <option value="">-- Choose an active asset --</option>
+                @foreach($assets->where('status', 'funded') as $asset)
+                    <option value="{{ $asset->id }}">{{ $asset->title }} (€{{ number_format($asset->total_valuation, 2) }} Valuation)</option>
+                @endforeach
+            </select>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+            <div>
+                <label>Purchasing Entity / Buyer Name</label>
+                <input type="text" name="buyer_name" placeholder="e.g. Blackstone Horizon Group" required style="width: 100%; padding: 8px; background: rgba(0,0,0,0.2); border: 1px solid var(--card-border); color: #fff; border-radius: 6px;">
+            </div>
+            <div>
+                <label>Offered Buyout Amount (€)</label>
+                <input type="number" step="0.01" name="offered_amount" placeholder="e.g. 1200000.00" required style="width: 100%; padding: 8px; background: rgba(0,0,0,0.2); border: 1px solid var(--card-border); color: #fff; border-radius: 6px;">
+            </div>
+        </div>
+        <div>
+            <label>Voting Window (Days)</label>
+            <input type="number" name="voting_days" value="7" min="1" max="30" required style="width: 100%; padding: 8px; background: rgba(0,0,0,0.2); border: 1px solid var(--card-border); color: #fff; border-radius: 6px;">
+        </div>
+        <button type="submit" class="btn btn-gold" style="padding: 10px 16px; cursor: pointer; border: none; font-weight: bold; max-width: 250px;">
+            List Buyout Proposal
+        </button>
+    </form>
+</div>
+
+<!-- ACTIVE BUYOUT PROPOSALS MANAGEMENT TABLE -->
+<div class="card" style="margin-bottom: 24px;">
+    <div class="section-title">Corporate Buyout Orders & Approvals</div>
+    <table style="width: 100%; text-align: left; border-collapse: collapse; margin-top: 12px;">
+        <thead>
+            <tr style="border-bottom: 1px solid var(--card-border);">
+                <th style="padding: 10px 0;">Asset</th>
+                <th>Buyer</th>
+                <th>Offer Amount</th>
+                <th>YES Votes</th>
+                <th>Status</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            @forelse($buyoutProposals as $proposal)
+                @php
+                    $totalShares = $proposal->asset->total_shares;
+                    $yesVotes = $proposal->totalYesVotes();
+                    $yesPercent = $totalShares > 0 ? round(($yesVotes / $totalShares) * 100, 1) : 0;
+                @endphp
+                <tr style="border-bottom: 1px solid var(--card-border);">
+                    <td style="padding: 10px 0;"><strong>{{ $proposal->asset->title }}</strong></td>
+                    <td>{{ $proposal->buyer_name }}</td>
+                    <td>€{{ number_format($proposal->offered_amount, 2) }}</td>
+                    <td>
+                        <span style="color: {{ $yesPercent >= 66 ? '#00e676' : '#fff' }}; font-weight: bold;">
+                            {{ $yesPercent }}%
+                        </span>
+                        ({{ number_format($yesVotes) }} / {{ number_format($totalShares) }})
+                    </td>
+                    <td>
+                        <span class="badge {{ $proposal->status === 'completed' ? 'positive' : 'neutral' }}">
+                            {{ str_replace('_', ' ', ucfirst($proposal->status)) }}
+                        </span>
+                    </td>
+                    <td>
+                        @if(in_array($proposal->status, ['voting', 'approved_pending_payout']) && $yesPercent >= 66)
+                            <form action="{{ route('admin.buyout.approve', $proposal->id) }}" method="POST">
+                                @csrf
+                                <button type="submit" class="btn btn-gold btn-sm" style="padding: 6px 12px; cursor: pointer;">
+                                    Execute & Pay Shareholders
+                                </button>
+                            </form>
+                        @elseif($proposal->status === 'completed')
+                            <span class="muted" style="font-size: 0.85rem;">Paid & Closed</span>
+                        @else
+                            <span class="muted" style="font-size: 0.85rem;">Awaiting 66%</span>
+                        @endif
+                    </td>
+                </tr>
+            @empty
+                <tr>
+                    <td colspan="6" class="muted" style="text-align: center; padding: 15px 0;">No corporate buyout proposals active.</td>
+                </tr>
+            @endforelse
+        </tbody>
+    </table>
+</div>
+
     <!-- Create New Opportunity Form -->
 <div class="card" style="margin-bottom: 24px;">
     <div class="section-title">Emit New Investment Opportunity</div>

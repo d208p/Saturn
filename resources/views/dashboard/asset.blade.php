@@ -213,6 +213,62 @@
 
             </div>
 
+            <!-- BUYOUT PROPOSAL & VOTING CARD -->
+@if($activeBuyout = $asset->buyoutProposals()->whereIn('status', ['voting', 'approved_pending_payout'])->latest()->first())
+    <div class="card" style="border: 1px solid var(--gold); margin-bottom: 24px;">
+        <div class="section-title" style="color: var(--gold);">
+            Corporate Buyout Offer Active
+        </div>
+
+        <p class="muted" style="font-size: 0.88rem; margin-bottom: 16px;">
+            A buyout proposal has been made by <strong>{{ $activeBuyout->buyer_name }}</strong> to purchase 100% of {{ $asset->title }} for <strong>€{{ number_format($activeBuyout->offered_amount, 2) }}</strong>.
+        </p>
+
+        @php
+            $totalShares = $asset->total_shares;
+            $yesVotes = $activeBuyout->totalYesVotes();
+            $noVotes = $activeBuyout->totalNoVotes();
+            $yesPercent = $totalShares > 0 ? round(($yesVotes / $totalShares) * 100, 1) : 0;
+            $userVote = $activeBuyout->votes()->where('user_id', auth()->id())->first();
+        @endphp
+
+        <!-- Voting Progress Bar -->
+        <div style="margin-bottom: 16px;">
+            <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 6px;">
+                <span>YES Votes: <strong>{{ number_format($yesVotes) }}</strong> ({{ $yesPercent }}%)</span>
+                <span>Threshold required: <strong>66%</strong></span>
+            </div>
+            <div style="width: 100%; height: 10px; background: rgba(255,255,255,0.08); border-radius: 999px; overflow: hidden;">
+                <div style="width: {{ min(100, $yesPercent) }}%; height: 100%; background: #00e676;"></div>
+            </div>
+        </div>
+
+        @if($activeBuyout->status === 'approved_pending_payout')
+            <div class="alert alert-success">
+                Buyout proposal passed! Pending administrator execution and funds distribution.
+            </div>
+        @elseif(now()->greaterThan($activeBuyout->voting_ends_at))
+            <div class="alert alert-error">
+                Voting period concluded. Awaiting final resolution.
+            </div>
+        @elseif($unitsOwned > 0)
+            <!-- Voting Action Form -->
+            <form action="{{ route('buyout.vote', $activeBuyout->id) }}" method="POST" style="display: flex; gap: 12px; align-items: center;">
+                @csrf
+                <span class="muted" style="font-size: 0.85rem;">Cast your {{ number_format($unitsOwned) }} votes:</span>
+                <button type="submit" name="vote" value="yes" class="btn btn-gold btn-sm" {{ $userVote?->vote === 'yes' ? 'disabled' : '' }}>
+                    {{ $userVote?->vote === 'yes' ? 'Voted YES' : 'Vote YES' }}
+                </button>
+                <button type="submit" name="vote" value="no" class="btn btn-outline btn-sm" {{ $userVote?->vote === 'no' ? 'disabled' : '' }}>
+                    {{ $userVote?->vote === 'no' ? 'Voted NO' : 'Vote NO' }}
+                </button>
+            </form>
+        @else
+            <p class="muted" style="font-size: 0.82rem;">Only current shareholders are eligible to vote on this proposal.</p>
+        @endif
+    </div>
+@endif
+
 
             <!-- Ownership -->
             <div class="card">

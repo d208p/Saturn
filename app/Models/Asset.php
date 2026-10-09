@@ -33,4 +33,9 @@ class Asset extends Model
     {
         return $this->hasMany(SellOrder::class);
     }
+
+    public function buyoutProposals(): HasMany
+    {
+        return $this->hasMany(BuyoutProposal::class);
+    }
 }

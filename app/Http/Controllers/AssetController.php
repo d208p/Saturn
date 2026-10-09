@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\Asset;
 use App\Models\Holding;
 use App\Models\Transaction;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Auth;
 
 class AssetController extends Controller
