@@ -35,6 +35,8 @@ Route::get('/login', function () {
 })->name('login');
 
 Route::post('/login', [AuthenticatedSessionController::class, 'store']);
+Route::get('/two-factor-challenge', fn () => view('auth.two-factor-challenge'))->name('two-factor.login');
+Route::post('/two-factor-challenge', [AuthenticatedSessionController::class, 'verifyTwoFactor']);
 
 Route::get('/register', function () {
     return view('auth.register');
@@ -98,6 +100,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/withdraw', [WithdrawalController::class, 'show'])->name('withdraw.show');
     Route::post('/withdraw', [WithdrawalController::class, 'process'])->name('withdraw.process');
     Route::post('/buyout/{proposal}/vote', [BuyoutController::class, 'vote'])->name('buyout.vote');
+    Route::get('/account/2fa/setup', [AccountController::class, 'showTwoFactorForm'])->name('account.2fa.setup');
+    Route::post('/account/2fa/enable', [AccountController::class, 'enableTwoFactor'])->name('account.2fa.enable');
+    Route::delete('/account/2fa/disable', [AccountController::class, 'disableTwoFactor'])->name('account.2fa.disable');
 });
 
 Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {

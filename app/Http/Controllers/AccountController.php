@@ -5,11 +5,18 @@ namespace App\Http\Controllers;
 use App\Models\BankAccount;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Stripe\StripeClient;
 use Throwable;
+use PragmaRX\Google2FA\Google2FA;
+use BaconQrCode\Renderer\ImageRenderer;
+use BaconQrCode\Renderer\Image\SvgImageBackEnd;
+use BaconQrCode\Renderer\RendererStyle\RendererStyle;
+use Illuminate\Support\Str;
+use BaconQrCode\Writer;
 
 class AccountController extends Controller
 {
@@ -19,9 +26,31 @@ class AccountController extends Controller
     public function index(Request $request)
     {
         $user = Auth::user();
-
+        $twoFactorQr = null;
+        $twoFactorSecret = null;
         $stripeBankAccounts = [];
         $payoutsReady = false;
+
+        if (!$user->two_factor_confirmed_at) {
+    $google2fa = new Google2FA();
+
+    if (!$user->two_factor_secret) {
+        $user->two_factor_secret = encrypt($google2fa->generateSecretKey());
+        $user->save();
+    }
+
+    $twoFactorSecret = decrypt($user->two_factor_secret);
+
+    $otpUrl = $google2fa->getQRCodeUrl(
+        config('app.name'),
+        $user->email,
+        $twoFactorSecret
+    );
+
+    $twoFactorQr = (new Writer(
+        new ImageRenderer(new RendererStyle(200), new SvgImageBackEnd())
+    ))->writeString($otpUrl);
+}
 
         /*
          * ---------------------------------------------------------
@@ -191,6 +220,9 @@ class AccountController extends Controller
 
                 'sessions' =>
                     $sessions,
+
+                'twoFactorQr' => $twoFactorQr,
+                'twoFactorSecret' => $twoFactorSecret,
             ]
         );
     }
@@ -821,6 +853,57 @@ class AccountController extends Controller
             'Accreditation request submitted.'
         );
     }
+
+/**
+ * Confirm and enable 2FA with a valid code.
+ */
+public function enableTwoFactor(Request $request)
+{
+    $request->validate(['code' => ['required', 'digits:6']]);
+
+    $user = Auth::user();
+
+    if (!$user->two_factor_secret) {
+        return back()->with('error', 'Two-factor setup was not started.');
+    }
+
+    // Fixed instantiation using the container service
+    $valid = app('pragmarx.google2fa')->verifyKey(
+        decrypt($user->two_factor_secret),
+        $request->code
+    );
+
+    if (!$valid) {
+        return back()->with('error', 'Invalid authentication code.')->with('open_2fa', true);
+    }
+
+    // Generate raw recovery codes to show the user ONCE
+    $rawCodes = \Illuminate\Support\Collection::times(8, fn () => \Illuminate\Support\Str::random(10) . '-' . \Illuminate\Support\Str::random(10))->all();
+
+    $user->two_factor_confirmed_at = now();
+    $user->two_factor_recovery_codes = encrypt(json_encode($rawCodes));
+    $user->save();
+
+    return back()
+        ->with('success', 'Two-factor authentication has been enabled.')
+        ->with('recovery_codes', $rawCodes);
+}
+
+/**
+ * Disable 2FA.
+ */
+public function disableTwoFactor(Request $request)
+{
+    $user = Auth::user();
+    
+    $user->forceFill([
+        'two_factor_secret' => null,
+        'two_factor_recovery_codes' => null,
+        'two_factor_confirmed_at' => null,
+    ])->save();
+
+    return back()->with('success', 'Two-factor authentication has been disabled.');
+}
 
 
     /**

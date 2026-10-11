@@ -18,8 +18,9 @@ use Laravel\Sanctum\HasApiTokens;
     'phone', 'dob', 'country', 'address',
     'kyc_status', 'identity_verified', 'address_verified', 
     'selfie_verified', 'accredited_investor', 'stripe_account_id',
+    'two_factor_secret', 'two_factor_recovery_codes', 'two_factor_confirmed_at',
 ])]
-#[Hidden(['password', 'remember_token'])]
+#[Hidden(['password', 'remember_token', 'two_factor_secret', 'two_factor_recovery_codes',])]
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */

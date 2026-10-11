@@ -605,31 +605,35 @@
 
 
         <div class="card" style="margin-bottom:20px;">
-
-            <div class="list-row" style="border-bottom:none;">
-
-                <div style="display:flex;align-items:center;gap:14px;">
-
-                    <label class="toggle">
-                        <input type="checkbox" checked>
-                        <span class="slider"></span>
-                    </label>
-
-                    <div>
-                        <div class="primary">
-                            Two-factor authentication
-                        </div>
-
-                        <div class="secondary">
-                            Require a code from your authenticator app when logging in
-                        </div>
-                    </div>
-
-                </div>
-
+    <div class="list-row" style="border-bottom:none; align-items:center;">
+        <div>
+            <div class="primary">
+                Two-factor authentication
             </div>
-
+            <div class="secondary">
+                @if($user->two_factor_confirmed_at)
+                    Protected by an authenticator app.
+                @else
+                    Require a code from your authenticator app when logging in.
+                @endif
+            </div>
         </div>
+
+        <div>
+            @if($user->two_factor_confirmed_at)
+                <form action="{{ route('account.2fa.disable') }}" method="POST">
+                    @csrf
+                    @method('DELETE')
+                    <button type="submit" class="btn btn-danger-outline btn-sm">Disable 2FA</button>
+                </form>
+            @else
+                <button type="button" class="btn btn-gold btn-sm" onclick="open2faModal()">
+                    Enable 2FA
+                </button>
+            @endif
+        </div>
+    </div>
+</div>
 
 
         <div class="card">
@@ -772,6 +776,82 @@
 
 
 {{-- =========================================================
+     2FA SETUP MODAL
+========================================================== --}}
+<div class="modal-backdrop" id="enable-2fa-modal">
+    <div class="modal-box" style="max-width: 400px; text-align: center;">
+        
+        <div class="section-title" style="margin-bottom:12px;">
+            Set up Two-Factor Authentication
+        </div>
+
+        <p class="muted" style="font-size:.88rem; line-height:1.6; margin-bottom:16px;">
+            Scan this QR code with your authenticator app (like Google Authenticator or Authy), then enter the 6-digit code below.
+        </p>
+
+        {{-- QR Code Container --}}
+        <div id="qr-code-container" style="margin:16px 0;background:#fff;padding:12px;display:inline-block;border-radius:8px;">
+    {!! $twoFactorQr !!}
+</div>
+
+<p class="muted" style="font-size:.78rem;">
+    Can't scan? Enter this key manually:<br>
+    <code style="color:var(--ivory);">{{ $twoFactorSecret }}</code>
+</p>
+
+        <form action="{{ route('account.2fa.enable') }}" method="POST">
+            @csrf
+
+            <div class="field" style="text-align: left; margin-top: 12px;">
+                <label for="code">Verification Code</label>
+                <input type="text" id="code" name="code" placeholder="123456" required autocomplete="one-time-code" maxlength="6" style="text-align: center; letter-spacing: 2px; font-size: 1.1rem;">
+            </div>
+
+            <div style="display:flex; gap:10px; justify-content:flex-end; margin-top: 20px;">
+                <button type="button" class="btn btn-outline" onclick="close2faModal()">
+                    Cancel
+                </button>
+                <button type="submit" class="btn btn-gold">
+                    Verify and Enable
+                </button>
+            </div>
+        </form>
+
+    </div>
+</div>
+
+
+{{-- =========================================================
+     RECOVERY CODES MODAL (Shown once after enabling 2FA)
+========================================================== --}}
+@if(session('recovery_codes'))
+<div class="modal-backdrop active" id="recovery-codes-modal">
+    <div class="modal-box" style="max-width: 440px; text-align: center;">
+        
+        <div class="section-title" style="margin-bottom:12px; color: var(--gold);">
+            Save Your Recovery Codes
+        </div>
+
+        <p class="muted" style="font-size:.85rem; line-height:1.5; margin-bottom:16px;">
+            Store these recovery codes in a secure password manager. If you lose access to your authenticator device, you can use these codes to log in. <strong style="color:var(--red);">They will not be shown again.</strong>
+        </p>
+
+        <div style="background: rgba(0,0,0,0.4); border: 1px solid var(--card-border); border-radius: 8px; padding: 14px; margin-bottom: 20px; text-align: left; display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+            @foreach(session('recovery_codes') as $code)
+                <code style="font-size: 0.82rem; color: var(--ivory); font-family: monospace;">{{ $code }}</code>
+            @endforeach
+        </div>
+
+        <button type="button" class="btn btn-gold" style="width: 100%;" onclick="document.getElementById('recovery-codes-modal').classList.remove('active')">
+            I have saved these codes
+        </button>
+
+    </div>
+</div>
+@endif
+
+
+{{-- =========================================================
      BANK MODAL
 ========================================================== --}}
 <div class="modal-backdrop" id="add-bank-modal">
@@ -824,16 +904,34 @@ function closeBankModal() {
     document.getElementById('add-bank-modal').classList.remove('active');
 }
 
+function open2faModal() {
+    document.getElementById('enable-2fa-modal').classList.add('active');
+}
+
+function close2faModal() {
+    document.getElementById('enable-2fa-modal').classList.remove('active');
+}
+
 document.addEventListener('DOMContentLoaded', function () {
+    // Backdrop click handlers
     const modal = document.getElementById('add-bank-modal');
+    if (modal) {
+        modal.addEventListener('click', function (event) {
+            if (event.target === modal) closeBankModal();
+        });
+    }
 
-    if (!modal) return;
+    const modal2fa = document.getElementById('enable-2fa-modal');
+    if (modal2fa) {
+        modal2fa.addEventListener('click', function (event) {
+            if (event.target === modal2fa) close2faModal();
+        });
+    }
 
-    modal.addEventListener('click', function (event) {
-        if (event.target === modal) {
-            closeBankModal();
-        }
-    });
+    // Auto-reopen 2FA setup modal if validation failed
+    @if(session('open_2fa'))
+        open2faModal();
+    @endif
 });
 </script>
 
