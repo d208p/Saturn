@@ -111,4 +111,5 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::post('/assets/distribute', [AdminDashboardController::class, 'distributeProfit'])->name('assets.distribute');
     Route::post('/buyouts/create', [AdminDashboardController::class, 'createBuyoutProposal'])->name('buyout.create');
     Route::post('/buyouts/{proposal}/approve', [AdminDashboardController::class, 'approveBuyout'])->name('buyout.approve');
+    Route::post('/assets/{asset}/end-term', [AdminDashboardController::class, 'endTerm'])->name('assets.endTerm');
 });

@@ -323,20 +323,37 @@
                     <th>Price</th>
                     <th>Available Shares</th>
                     <th>Status</th>
+                    <th>Action</th>
                 </tr>
             </thead>
             <tbody>
                 @forelse($assets as $asset)
                     <tr style="border-bottom: 1px solid var(--card-border);">
-                        <td style="padding: 10px 0;">{{ $asset->title }}</td>
+                        <td style="padding: 10px 0;"><strong>{{ $asset->title }}</strong></td>
                         <td>{{ $asset->category }}</td>
                         <td>€{{ number_format($asset->share_price, 2) }}</td>
-                        <td>{{ $asset->available_shares }} / {{ $asset->total_shares }}</td>
-                        <td>{{ ucfirst($asset->status) }}</td>
+                        <td>{{ number_format($asset->available_shares) }} / {{ number_format($asset->total_shares) }}</td>
+                        <td>
+                            <span class="badge {{ $asset->status === 'active' ? 'positive' : 'neutral' }}">
+                                {{ ucfirst($asset->status) }}
+                            </span>
+                        </td>
+                        <td>
+                            @if($asset->status === 'active')
+                                <form action="{{ route('admin.assets.endTerm', $asset->id) }}" method="POST" onsubmit="return confirm('Are you sure you want to terminate this opportunity? All shareholders will be refunded at €{{ number_format($asset->share_price, 2) }}/share.');">
+                                    @csrf
+                                    <button type="submit" class="btn btn-danger-outline btn-sm" style="padding: 6px 12px; cursor: pointer; color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); background: rgba(239, 68, 68, 0.1); border-radius: 6px;">
+                                        End Term
+                                    </button>
+                                </form>
+                            @else
+                                <span class="muted" style="font-size: 0.85rem;">N/A</span>
+                            @endif
+                        </td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="5" class="muted" style="text-align: center; padding: 15px 0;">No opportunities emitted yet.</td>
+                        <td colspan="6" class="muted" style="text-align: center; padding: 15px 0;">No opportunities emitted yet.</td>
                     </tr>
                 @endforelse
             </tbody>

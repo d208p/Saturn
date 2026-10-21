@@ -200,4 +200,61 @@ class DashboardController extends Controller
 
         return back()->with('success', 'New asset created successfully.');
     }
+
+    /**
+     * Terminate an active asset, refund shareholders (investment + 4.9% primary fee),
+     * remove associated platform fee records, and mark the asset as exited.
+     */
+    public function endTerm(Asset $asset)
+    {
+        if ($asset->status !== 'active') {
+            return back()->with('error', 'Only active assets can be terminated.');
+        }
+
+        DB::transaction(function () use ($asset) {
+            // 1. Retrieve all active holdings for this asset
+            $holdings = Holding::where('asset_id', $asset->id)
+                ->where('shares_owned', '>', 0)
+                ->get();
+
+            foreach ($holdings as $holding) {
+                // Base invested amount for current shares owned
+                $baseAmount = $holding->shares_owned * $asset->share_price;
+
+                // Calculate 4.9% primary market fee refund (e.g., €10.00 base -> €0.49 fee -> €10.49 total)
+                $feeRefund = $baseAmount * 0.049;
+                $totalRefund = $baseAmount + $feeRefund;
+
+                $user = User::find($holding->user_id);
+                if ($user) {
+                    // Credit full amount + fee back to the user's cash balance
+                    $user->increment('balance', $totalRefund);
+
+                    // Record the full refund transaction log
+                    Transaction::create([
+                        'user_id'  => $user->id,
+                        'asset_id' => $asset->id,
+                        'type'     => 'distribution',
+                        'amount'   => $totalRefund,
+                        'shares'   => $holding->shares_owned,
+                        'status'   => 'completed',
+                    ]);
+                }
+
+                // Delete user's holding record
+                $holding->delete();
+            }
+
+            // 2. Remove all logged platform fee entries for this asset from the database ledger
+            PlatformFee::where('asset_id', $asset->id)->delete();
+
+            // 3. Update the asset status to 'closed' and clear remaining available shares
+            $asset->update([
+                'status'           => 'closed',
+                'available_shares' => 0,
+            ]);
+        });
+
+        return back()->with('success', "Terminated asset '{$asset->title}'. All shareholders have been refunded their principal plus the 4.9% primary fee, and fee records have been purged.");
+    }
 }
