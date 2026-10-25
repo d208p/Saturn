@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\DB;
 
 class SecondaryMarketController extends Controller
 {
-    const PLATFORM_FEE_PERCENT = 0.033; // 3.3% platform fee
+    const PLATFORM_FEE_PERCENT = 3.30; // 3.3% platform fee stored as percentage value
 
     public function showAssetListings(Asset $asset)
     {
@@ -75,7 +75,7 @@ class SecondaryMarketController extends Controller
             $remainingSharesToProcess -= $takeShares;
         }
 
-        $platformFee = $totalSubtotal * self::PLATFORM_FEE_PERCENT;
+        $platformFee = $totalSubtotal * (self::PLATFORM_FEE_PERCENT / 100);
         $totalCostWithFee = $totalSubtotal + $platformFee;
 
         if ($buyer->balance < $totalCostWithFee) {
@@ -84,7 +84,7 @@ class SecondaryMarketController extends Controller
             ]);
         }
 
-        DB::transaction(function () use ($buyer, $asset, $ordersToFulfill, $totalCostWithFee, $platformFee) {
+        DB::transaction(function () use ($buyer, $asset, $ordersToFulfill, $totalCostWithFee, $platformFee, $totalSubtotal) {
             // 1. Deduct total cost from buyer's Saturn balance
             $buyer->decrement('balance', $totalCostWithFee);
 
@@ -98,7 +98,7 @@ class SecondaryMarketController extends Controller
                 $payoutToSeller = $item['cost'];
                 $totalSharesBought += $sharesTaken;
 
-                // Credit seller
+                // Credit seller cash balance
                 $seller = User::findOrFail($order->user_id);
                 $seller->increment('balance', $payoutToSeller);
 
@@ -109,7 +109,7 @@ class SecondaryMarketController extends Controller
                     $order->decrement('shares', $sharesTaken);
                 }
 
-                // Log seller transaction
+                // Log seller transaction (appears in their activity as green cash-in)
                 Transaction::create([
                     'user_id'  => $seller->id,
                     'asset_id' => $asset->id,
@@ -127,7 +127,7 @@ class SecondaryMarketController extends Controller
             );
             $buyerHolding->increment('shares_owned', $totalSharesBought);
 
-            // 4. Log buyer transaction
+            // 4. Log buyer transaction (appears in their activity as red cash-out)
             Transaction::create([
                 'user_id'  => $buyer->id,
                 'asset_id' => $asset->id,
@@ -143,7 +143,7 @@ class SecondaryMarketController extends Controller
                 'asset_id'       => $asset->id,
                 'source'         => 'secondary_market',
                 'amount'         => $platformFee,
-                'fee_percentage' => self::PLATFORM_FEE_PERCENT * 100,
+                'fee_percentage' => self::PLATFORM_FEE_PERCENT,
             ]);
         });
 

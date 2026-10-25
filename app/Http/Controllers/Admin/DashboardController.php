@@ -165,7 +165,7 @@ class DashboardController extends Controller
                     Transaction::create([
                         'user_id'  => $user->id,
                         'asset_id' => $asset->id,
-                        'type'     => 'distribution',
+                        'type'     => 'income',
                         'amount'   => $userProfit,
                         'shares'   => $holding->shares_owned,
                         'status'   => 'completed',

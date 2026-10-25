@@ -49,10 +49,10 @@ class ListingController extends Controller
         $askingPrice = (float) $request->input('price_per_share');
 
         DB::transaction(function () use ($holding, $sharesToList, $askingPrice, $userId, $asset) {
-            // 1. Scădem/Blocăm acțiunile din poziția utilizatorului
+            // 1. Lock/decrement shares from the user's holding position
             $holding->decrement('shares_owned', $sharesToList);
 
-            // 2. Creăm ordinul de vânzare în piața secundară
+            // 2. Create the sell order entry in the secondary market book
             SellOrder::create([
                 'user_id' => $userId,
                 'asset_id' => $asset->id,
@@ -60,16 +60,8 @@ class ListingController extends Controller
                 'price_per_share' => $askingPrice,
                 'status' => 'active',
             ]);
-
-            // 3. Înregistrăm în istoricul de tranzacții
-            Transaction::create([
-                'user_id' => $userId,
-                'asset_id' => $asset->id,
-                'type' => 'sell_equity',
-                'amount' => $sharesToList * $askingPrice,
-                'shares' => $sharesToList,
-                'status' => 'listed',
-            ]);
+            
+            // NOTE: Removed transaction creation here since no cash/trade has executed yet!
         });
 
         return redirect()->route('market')->with('success', 'Ordinul de vânzare a fost creat cu succes!');
@@ -99,16 +91,6 @@ class ListingController extends Controller
 
             // 2. Trecem statusul ordinului în 'cancelled'
             $sellOrder->update([
-                'status' => 'cancelled',
-            ]);
-
-            // 3. Adăugăm o înregistrare în tranzacții pentru jurnalizare
-            Transaction::create([
-                'user_id' => $userId,
-                'asset_id' => $sellOrder->asset_id,
-                'type' => 'cancel_listing',
-                'amount' => $sellOrder->shares * $sellOrder->price_per_share,
-                'shares' => $sellOrder->shares,
                 'status' => 'cancelled',
             ]);
         });

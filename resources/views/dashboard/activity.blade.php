@@ -11,47 +11,61 @@
     <div id="activity-panels">
 
         <!-- Transactions -->
-        <div class="tab-panel" id="transactions">
-            <div class="card">
-                @forelse($transactions as $tx)
-                    @php
-                        $isPositive = in_array(strtolower($tx->type), ['sell', 'distribution', 'deposit']);
-                        $badgeClass = match(strtolower($tx->type)) {
-                            'buy' => 'negative',
-                            'sell' => 'positive',
-                            'distribution' => 'positive',
-                            'deposit' => 'neutral',
-                            default => 'muted'
-                        };
-                    @endphp
-                    <div class="list-row">
-                        <div style="display: flex; align-items: center; gap: 12px;">
-                            <span class="badge {{ $badgeClass }}">{{ strtoupper($tx->type) }}</span>
-                            <div>
-                                <div class="primary">{{ $tx->asset->title ?? $tx->description ?? 'Transaction' }}</div>
-                                <div class="secondary">
-                                    {{ $tx->created_at->format('M j, Y') }}
-                                    @if($tx->units)
-                                        · {{ $tx->units }} units
-                                    @endif
-                                </div>
-                            </div>
-                        </div>
-                        <div class="value {{ $isPositive ? 'positive' : 'negative' }}">
-                            {{ $isPositive ? '+' : '-' }}€{{ number_format(abs($tx->amount), 2) }}
-                        </div>
-                    </div>
-                @empty
-                    <div style="padding: 20px; text-align: center;" class="muted">No recent transactions found.</div>
-                @endforelse
+<div class="tab-panel" id="transactions">
+    <div class="card">
+        @forelse($transactions as $tx)
+            @php
+                $txType = strtolower($tx->type);
+                
+                // Money IN (Inflows): deposits, distributions, and all sell variants
+                $isPositive = in_array($txType, ['deposit', 'distribution', 'sell', 'sell_equity', 'sell_secondary', 'income']);
+                
+                $badgeClass = match(true) {
+                    in_array($txType, ['deposit', 'distribution', 'sell', 'sell_equity', 'sell_secondary', 'income']) => 'positive',
+                    in_array($txType, ['buy', 'buy_equity', 'withdrawal']) => 'negative',
+                    default => 'neutral'
+                };
 
-                @if($transactions->hasPages())
-                    <div style="padding: 16px;">
-                        {{ $transactions->links() }}
+                $formattedType = match($txType) {
+                    'buy_equity' => 'Buy Equity',
+                    'buy_secondary' => 'Buy Secondary',
+                    'sell_equity' => 'Sell Equity',
+                    'sell_secondary' => 'Sell Secondary',
+                    'withdrawal' => 'Withdrawal',
+                    'distribution' => 'Distribution',
+                    'deposit' => 'Deposit',
+                    'cancel_listing' => 'Cancel Listing',
+                    default => ucfirst(str_replace('_', ' ', $txType))
+                };
+            @endphp
+            <div class="list-row">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <span class="badge {{ $badgeClass }}">{{ strtoupper($formattedType) }}</span>
+                    <div>
+                        <div class="primary">{{ $tx->asset->title ?? $tx->description ?? $formattedType }}</div>
+                        <div class="secondary">
+                            {{ $tx->created_at->format('M j, Y') }}
+                            @if($tx->shares)
+                                · {{ number_format($tx->shares) }} shares
+                            @endif
+                        </div>
                     </div>
-                @endif
+                </div>
+                <div class="value {{ $isPositive ? 'positive' : 'negative' }}">
+                    {{ $isPositive ? '+' : '-' }}€{{ number_format(abs($tx->amount), 2) }}
+                </div>
             </div>
-        </div>
+        @empty
+            <div style="padding: 20px; text-align: center;" class="muted">No recent transactions found.</div>
+        @endforelse
+
+        @if($transactions->hasPages())
+            <div style="padding: 16px;">
+                {{ $transactions->links() }}
+            </div>
+        @endif
+    </div>
+</div>
 
         <!-- Orders -->
         <div class="tab-panel" id="orders">
@@ -61,8 +75,8 @@
                         <tr>
                             <th>Asset</th>
                             <th>Side</th>
-                            <th>Units</th>
-                            <th>Price</th>
+                            <th>Shares</th>
+                            <th>Price / Share</th>
                             <th>Status</th>
                             <th></th>
                         </tr>
@@ -72,12 +86,10 @@
                             <tr>
                                 <td style="font-weight: 700;">{{ $order->asset->title ?? 'N/A' }}</td>
                                 <td>
-                                    <span class="badge {{ strtolower($order->type) === 'buy' ? 'negative' : 'positive' }}">
-                                        {{ strtoupper($order->type) }}
-                                    </span>
+                                    <span class="badge positive">SELL</span>
                                 </td>
-                                <td>{{ $order->units }}</td>
-                                <td>€{{ number_format($order->price_per_unit, 2) }}</td>
+                                <td>{{ number_format($order->shares) }}</td>
+                                <td>€{{ number_format($order->price_per_share, 2) }}</td>
                                 <td>
                                     <span class="badge {{ $order->status === 'active' ? 'positive' : 'muted' }}">
                                         {{ ucfirst($order->status) }}
@@ -85,7 +97,7 @@
                                 </td>
                                 <td>
                                     @if($order->status === 'active')
-                                        <form action="{{ route('orders.cancel', $order->id) }}" method="POST" style="display:inline;">
+                                        <form action="{{ route('listings.cancel', $order->id) }}" method="POST" style="display:inline;">
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit" class="btn btn-danger-outline btn-sm">Cancel</button>
@@ -106,6 +118,4 @@
                 </table>
             </div>
         </div>
-
-    </div>
 @endsection
