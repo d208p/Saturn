@@ -49,18 +49,32 @@
             <div class="card">
                 <div class="card-header">
                     <div class="section-title">Portfolio risk</div>
-                    <span class="badge neutral">Moderate · 6.4 / 10</span>
+                    <span class="badge {{ $riskBadgeClass }}">{{ $riskLabel }} · {{ $riskScore }} / 10</span>
                 </div>
-                <div class="list-row"><div class="primary">Diversification</div><div class="value positive">Good</div></div>
-                <div class="list-row"><div class="primary">Liquidity</div><div class="value" style="color: var(--gold);">Moderate</div></div>
-                <div class="list-row"><div class="primary">Asset concentration</div><div class="value positive">Low</div></div>
-                <div class="list-row"><div class="primary">Geographic exposure</div><div class="value" style="color: var(--gold);">Moderate</div></div>
-                <div class="list-row"><div class="primary">Development exposure</div><div class="value positive">Low</div></div>
+                <div class="list-row">
+                    <div class="primary">Diversification</div>
+                    <div class="value {{ $diversification['class'] }}">{{ $diversification['label'] }}</div>
+                </div>
+                <div class="list-row">
+                    <div class="primary">Liquidity</div>
+                    <div class="value {{ $liquidity['class'] }}">{{ $liquidity['label'] }}</div>
+                </div>
+                <div class="list-row">
+                    <div class="primary">Asset concentration</div>
+                    <div class="value {{ $concentration['class'] }}">{{ $concentration['label'] }}</div>
+                </div>
+                <div class="list-row">
+                    <div class="primary">Geographic exposure</div>
+                    <div class="value {{ $geographicRisk['class'] }}">{{ $geographicRisk['label'] }}</div>
+                </div>
+                <div class="list-row">
+                    <div class="primary">Development exposure</div>
+                    <div class="value {{ $devExposure['class'] }}">{{ $devExposure['label'] }}</div>
+                </div>
                 <div class="disclaimer-box">
                     This score reflects how your current positions are calculated to behave together — it is not a recommendation and does not guarantee any outcome.
                 </div>
             </div>
-        </div>
 
         <!-- Holdings -->
         <div class="tab-panel" id="holdings">

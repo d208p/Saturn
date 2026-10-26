@@ -38,6 +38,86 @@
 
         .icon { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; vertical-align: middle; flex-shrink: 0; }
 
+
+/* ---------- Pagination ---------- */
+
+nav[role="navigation"] {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 14px;
+    width: 100%;
+    padding: 16px 0;
+    font-size: 0.82rem;
+    color: var(--slate);
+}
+
+nav[role="navigation"] > div {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+nav[role="navigation"] a,
+nav[role="navigation"] span {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 36px;
+    min-height: 36px;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--ivory);
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+nav[role="navigation"] a:hover {
+    border-color: var(--gold-border);
+    background: var(--gold-dim);
+    color: var(--gold);
+}
+
+nav[role="navigation"] span[aria-current="page"] {
+    border-color: var(--gold-border);
+    background: var(--gold-dim);
+    color: var(--gold);
+}
+
+nav[role="navigation"] span[aria-disabled="true"] {
+    color: var(--slate);
+    opacity: 0.5;
+}
+
+nav[role="navigation"] svg {
+    width: 16px !important;
+    height: 16px !important;
+    max-width: 16px;
+    max-height: 16px;
+    flex-shrink: 0;
+}
+
+nav[role="navigation"] p {
+    margin: 0;
+    color: var(--slate);
+    font-size: 0.8rem;
+}
+
+@media (max-width: 560px) {
+    nav[role="navigation"] {
+        justify-content: center;
+    }
+
+    nav[role="navigation"] > div {
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+}
+
+
         /* ---------- App shell ---------- */
         .app-shell { display: flex; min-height: 100vh; }
 
@@ -289,7 +369,7 @@
     <div class="app-shell">
         <aside class="sidebar">
             <a href="/dashboard" class="sidebar-logo">
-                <img src="{{ asset('images/v5yuA.png') }}" alt="Saturn" style="height: 26px;">
+                <img src="{{ asset('images/v5yuA.png') }}" alt="Saturn" style="height: 40px;">
                 <img src="{{ asset('images/text.svg') }}" alt="" style="max-width: 150px;">
             </a>
 
@@ -310,7 +390,6 @@
             <div class="nav-group">
                 <div class="nav-group-label">Market</div>
                 <a href="/market#discover" class="nav-sublink">Discover</a>
-                <a href="/market#new-projects" class="nav-sublink">New Projects</a>
                 <a href="/market#secondary" class="nav-sublink">Secondary Market</a>
                 <a href="/market#watchlist" class="nav-sublink">Watchlist</a>
                 <a href="/market#my-listings" class="nav-sublink">My Listings</a>

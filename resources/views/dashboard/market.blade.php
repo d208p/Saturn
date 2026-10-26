@@ -14,38 +14,14 @@
 @section('content')
     <div class="tabs" data-panels="#market-panels">
         <button class="tab-btn active" data-tab="discover">Discover</button>
-        <button class="tab-btn" data-tab="new-projects">New Projects</button>
         <button class="tab-btn" data-tab="secondary">Secondary Market</button>
         <button class="tab-btn" data-tab="watchlist">Watchlist</button>
         <button class="tab-btn" data-tab="my-listings">My Listings</button>
     </div>
 
     <div id="market-panels">
-
         <!-- Discover -->
         <div class="tab-panel" id="discover">
-            <div class="section-title">Trending categories</div>
-            <div class="grid grid-3">
-                <div class="card trend-card">
-                    <div class="stat-label">Hospitality</div>
-                    <div style="font-weight: 700; margin: 4px 0 6px;">Hotel positions</div>
-                    <p class="muted" style="font-size: 0.85rem;">Operating hotels with established occupancy and revenue history.</p>
-                </div>
-                <div class="card trend-card">
-                    <div class="stat-label">Energy</div>
-                    <div style="font-weight: 700; margin: 4px 0 6px;">Solar & wind</div>
-                    <p class="muted" style="font-size: 0.85rem;">Long-term power purchase agreements with predictable output.</p>
-                </div>
-                <div class="card trend-card">
-                    <div class="stat-label">Agriculture</div>
-                    <div style="font-weight: 700; margin: 4px 0 6px;">Vineyards & orchards</div>
-                    <p class="muted" style="font-size: 0.85rem;">Land-backed assets with seasonal, harvest-linked cash flow.</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- New Projects -->
-        <div class="tab-panel" id="new-projects">
             <div class="card">
                 @forelse($newProjects as $project)
                     @php
