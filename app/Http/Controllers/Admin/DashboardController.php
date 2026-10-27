@@ -11,6 +11,7 @@ use App\Models\Transaction;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 
 class DashboardController extends Controller
 {
@@ -140,41 +141,66 @@ class DashboardController extends Controller
         ]);
 
         $asset = Asset::findOrFail($request->asset_id);
-        $totalProfit = (float) $request->total_amount;
+        $grossProfit = (float) $request->total_amount;
 
+        // Calculate circulating shares (Total shares minus currently available unsold shares)
         $circulatingShares = $asset->total_shares - $asset->available_shares;
 
         if ($circulatingShares <= 0) {
             return back()->with('error', 'Distribution failed: No users currently own shares of this asset.');
         }
 
-        $profitPerShare = $totalProfit / $circulatingShares;
+        $taxPercentage = 12.10;
+
+        // Calculate per-share metrics to ensure exact proportional distribution and tax splitting
+        $grossPerShare = $grossProfit / $circulatingShares;
+        $taxPerShare = $grossPerShare * ($taxPercentage / 100);
+        $netPerShare = $grossPerShare - $taxPerShare;
 
         $holdings = Holding::where('asset_id', $asset->id)
             ->where('shares_owned', '>', 0)
             ->get();
 
-        DB::transaction(function () use ($holdings, $profitPerShare, $asset, $totalProfit) {
+        DB::transaction(function () use ($holdings, $netPerShare, $taxPerShare, $asset, $taxPercentage) {
+            $totalNetDistributed = 0;
+            $totalTaxCollected = 0;
+
             foreach ($holdings as $holding) {
-                $userProfit = $holding->shares_owned * $profitPerShare;
-
                 $user = User::find($holding->user_id);
-                if ($user) {
-                    $user->increment('balance', $userProfit);
+                if (!$user) continue;
 
-                    Transaction::create([
-                        'user_id'  => $user->id,
-                        'asset_id' => $asset->id,
-                        'type'     => 'income',
-                        'amount'   => $userProfit,
-                        'shares'   => $holding->shares_owned,
-                        'status'   => 'completed',
-                    ]);
-                }
+                // Calculate user-specific amounts based on their owned shares
+                $userNetProfit = $holding->shares_owned * $netPerShare;
+                $userTaxAmount = $holding->shares_owned * $taxPerShare;
+
+                $totalNetDistributed += $userNetProfit;
+                $totalTaxCollected += $userTaxAmount;
+
+                // 1. Credit user's balance with their share of the NET profit
+                $user->increment('balance', $userNetProfit);
+
+                // 2. Log the income transaction for the user
+                Transaction::create([
+                    'user_id'  => $user->id,
+                    'asset_id' => $asset->id,
+                    'type'     => 'income',
+                    'amount'   => $userNetProfit,
+                    'shares'   => $holding->shares_owned,
+                    'status'   => 'completed',
+                ]);
+
+                // 3. Record an individual platform fee entry for THIS user's holding tax portion
+                \App\Models\PlatformFee::create([
+                    'user_id'        => $user->id,
+                    'asset_id'       => $asset->id,
+                    'source'         => 'management_tax',
+                    'amount'         => $userTaxAmount,
+                    'fee_percentage' => $taxPercentage,
+                ]);
             }
         });
 
-        return back()->with('success', "Successfully distributed €" . number_format($totalProfit, 2) . " across shareholders of {$asset->title}.");
+        return back()->with('success', "Successfully distributed profits across shareholders of {$asset->title} with individual management tax records created.");
     }
 
     public function storeAsset(Request $request)

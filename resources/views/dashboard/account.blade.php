@@ -4,935 +4,424 @@
 
 @push('styles')
 <style>
-    .field { margin-bottom:16px; }
-    .field label {
-        display:block;
-        font-size:.82rem;
-        font-weight:600;
-        margin-bottom:7px;
-        color:var(--ivory);
-    }
-    .field input,
-    .field select {
-        width:100%;
-        padding:12px 14px;
-        border:1px solid var(--card-border);
-        border-radius:9px;
-        background:rgba(0,0,0,.25);
-        color:var(--ivory);
-        font:.9rem inherit;
-        outline:none;
-        transition:border-color .15s;
-    }
-    .field input::placeholder { color:var(--slate); }
-    .field input:focus,
-    .field select:focus { border-color:var(--gold-border); }
+    .acct { --line: rgba(255,255,255,0.07); }
+    .acct .tabs { border-bottom: 1px solid var(--line); gap: 28px; margin-bottom: 36px; }
+    .acct .tab-btn { padding: 12px 0; font-size: .88rem; letter-spacing: .01em; }
+    .acct .num { font-variant-numeric: tabular-nums; }
+    .acct .eyebrow { font-size: .64rem; text-transform: uppercase; letter-spacing: .12em; color: var(--slate); font-weight: 600; }
 
-    .field-row-2 {
-        display:grid;
-        grid-template-columns:1fr 1fr;
-        gap:16px;
-    }
+    /* Alerts */
+    .alert { padding: 12px 16px; border-radius: 8px; margin-bottom: 24px; font-size: .86rem; border: 1px solid; }
+    .alert-success { background: var(--green-dim); border-color: rgba(74,222,128,.3); color: var(--green); }
+    .alert-error { background: var(--red-dim); border-color: rgba(248,113,113,.3); color: var(--red); }
+    .alert ul { margin: 0; padding-left: 18px; }
 
-    .toggle {
-        position:relative;
-        display:inline-block;
-        width:44px;
-        height:24px;
-        flex-shrink:0;
-    }
-    .toggle input {
-        opacity:0;
-        width:0;
-        height:0;
-    }
-    .toggle .slider {
-        position:absolute;
-        inset:0;
-        background:var(--card-border);
-        border-radius:100px;
-        cursor:pointer;
-        transition:.2s;
-    }
-    .toggle .slider:before {
-        content:'';
-        position:absolute;
-        width:18px;
-        height:18px;
-        left:3px;
-        top:3px;
-        background:var(--ivory);
-        border-radius:50%;
-        transition:.2s;
-    }
-    .toggle input:checked + .slider { background:var(--gold); }
-    .toggle input:checked + .slider:before {
-        transform:translateX(20px);
-        background:var(--midnight);
-    }
+    /* Identity header */
+    .id-head { display: flex; align-items: center; gap: 20px; padding-bottom: 32px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+    .id-avatar { width: 64px; height: 64px; border-radius: 50%; background: var(--gold-dim); color: var(--gold); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.4rem; flex-shrink: 0; }
+    .id-name { font-weight: 700; font-size: 1.15rem; letter-spacing: -.01em; }
+    .id-meta { font-size: .82rem; color: var(--slate); margin-top: 2px; }
+    .id-head .badge { margin-left: auto; }
 
-    .profile-head {
-        display:flex;
-        align-items:center;
-        gap:16px;
-    }
+    /* Sections */
+    .sec { display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 48px; padding: 32px 0; border-bottom: 1px solid var(--line); }
+    .sec:last-child { border-bottom: 0; }
+    .sec h2 { font-size: .95rem; font-weight: 700; margin-bottom: 6px; }
+    .sec .lede { font-size: .82rem; color: var(--slate); line-height: 1.55; }
 
-    .profile-avatar {
-        width:64px;
-        height:64px;
-        border-radius:50%;
-        background:var(--gold-dim);
-        color:var(--gold);
-        display:flex;
-        align-items:center;
-        justify-content:center;
-        font-weight:800;
-        font-size:1.4rem;
-        flex-shrink:0;
+    /* Fields */
+    .field { margin-bottom: 20px; }
+    .field label { display: block; font-size: .64rem; text-transform: uppercase; letter-spacing: .12em; color: var(--slate); margin-bottom: 6px; font-weight: 600; }
+    .field input, .field select {
+        width: 100%; background: transparent; border: 0; border-bottom: 1px solid var(--line);
+        color: var(--ivory); font-family: inherit; font-size: .92rem; padding: 8px 2px; outline: none; border-radius: 0; transition: border-color .15s;
     }
+    .field input::placeholder { color: rgba(102,112,133,.7); }
+    .field select option { background: var(--midnight); color: var(--ivory); }
+    .field input:focus, .field select:focus { border-bottom-color: var(--gold); }
+    .field .hint { font-size: .74rem; margin-top: 6px; min-height: 1em; color: var(--slate); }
+    .field .hint.bad { color: var(--red); }
+    .field-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 28px; }
+    .btn:disabled { opacity: .4; cursor: not-allowed; transform: none; box-shadow: none; }
 
-    .alert {
-        padding:12px 16px;
-        border-radius:9px;
-        margin-bottom:20px;
-        font-size:.88rem;
-    }
-    .alert-success {
-        background:rgba(34,197,94,.15);
-        border:1px solid rgba(34,197,94,.3);
-        color:#4ade80;
-    }
-    .alert-error {
-        background:rgba(239,68,68,.15);
-        border:1px solid rgba(239,68,68,.3);
-        color:#f87171;
-    }
+    /* Rows */
+    .row { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 16px 0; border-top: 1px solid var(--line); }
+    .row:first-child { border-top: 0; padding-top: 0; }
+    .row .t { font-weight: 700; font-size: .9rem; }
+    .row .s { font-size: .78rem; color: var(--slate); margin-top: 3px; line-height: 1.5; }
+    .row .grow { min-width: 0; }
+    .ellip { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .btn-link { text-decoration: none; }
+    .state { font-size: .82rem; color: var(--slate); line-height: 1.6; }
 
-    .modal-backdrop {
-        display:none;
-        position:fixed;
-        inset:0;
-        background:rgba(0,0,0,.7);
-        align-items:center;
-        justify-content:center;
-        z-index:1000;
-        padding:20px;
-    }
-    .modal-backdrop.active { display:flex; }
+    .empty { padding: 28px 0; color: var(--slate); font-size: .88rem; line-height: 1.6; }
+    .empty strong { display: block; color: var(--ivory); font-size: .92rem; margin-bottom: 4px; }
 
-    .modal-box {
-        width:100%;
-        max-width:480px;
-        padding:24px;
-        background:var(--card-bg,#1e1e24);
-        border:1px solid var(--card-border);
-        border-radius:12px;
-    }
+    /* Modals */
+    .modal-backdrop { display: none; position: fixed; inset: 0; background: rgba(5,9,18,.8); backdrop-filter: blur(6px); align-items: center; justify-content: center; z-index: 1000; padding: 20px; }
+    .modal-backdrop.active { display: flex; }
+    .modal-box { width: 100%; max-width: 460px; padding: 28px; background: #101828; border: 1px solid var(--line); border-radius: 12px; max-height: 92vh; overflow-y: auto; }
+    .modal-box h3 { font-size: 1rem; font-weight: 700; margin-bottom: 10px; }
+    .modal-box p { font-size: .86rem; color: var(--slate); line-height: 1.6; }
+    .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 24px; }
+    .codes { background: rgba(0,0,0,.35); border: 1px solid var(--line); border-radius: 8px; padding: 14px; margin: 18px 0 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; text-align: left; }
+    .codes code { font-size: .82rem; color: var(--ivory); font-family: ui-monospace, monospace; }
 
-    @media (max-width:640px) {
-        .field-row-2 { grid-template-columns:1fr; }
-        .profile-head { align-items:flex-start; }
+    @media (max-width: 860px) {
+        .sec { grid-template-columns: 1fr; gap: 20px; padding: 28px 0; }
+    }
+    @media (max-width: 640px) {
+        .acct .tabs { gap: 20px; }
+        .field-row-2 { grid-template-columns: 1fr; }
+        .id-head .badge { margin-left: 0; }
+        .row { flex-wrap: wrap; }
+        .modal-actions .btn { flex: 1; }
     }
 </style>
 @endpush
 
 @section('content')
+@php
+    $countries = ['Romania', 'Italy', 'France', 'Spain', 'Other'];
+    $currentCountry = old('country', $user->country);
+    if ($currentCountry && !in_array($currentCountry, $countries)) { array_unshift($countries, $currentCountry); } // keep saved value even if not listed
+    $identityVerified = (bool) $user->identity_verified;
+    $twoFactorOn = (bool) $user->two_factor_confirmed_at;
+    $kyc = $user->kyc_status ?? 'unverified';
+@endphp
 
-{{-- Alerts --}}
-@if(session('success'))
-    <div class="alert alert-success">{{ session('success') }}</div>
-@endif
+<div class="acct">
 
-@if(session('error'))
-    <div class="alert alert-error">{{ session('error') }}</div>
-@endif
+    @if(session('success'))<div class="alert alert-success" role="status">{{ session('success') }}</div>@endif
+    @if(session('error'))<div class="alert alert-error" role="alert">{{ session('error') }}</div>@endif
+    @if($errors->any())
+        <div class="alert alert-error" role="alert"><ul>@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>
+    @endif
 
-@if($errors->any())
-    <div class="alert alert-error">
-        <ul style="margin:0;padding-left:18px;">
-            @foreach($errors->all() as $error)
-                <li>{{ $error }}</li>
-            @endforeach
-        </ul>
+    <div class="tabs" data-panels="#account-panels">
+        @foreach(['profile' => 'Profile', 'verification' => 'Verification', 'bank' => 'Bank', 'security' => 'Security', 'documents' => 'Documents'] as $id => $label)
+            <button class="tab-btn {{ $loop->first ? 'active' : '' }}" data-tab="{{ $id }}">{{ $label }}</button>
+        @endforeach
     </div>
-@endif
 
+    <div id="account-panels">
 
-{{-- Tabs --}}
-<div class="tabs" data-panels="#account-panels">
-    @foreach([
-        'profile' => 'Profile',
-        'verification' => 'Verification',
-        'bank' => 'Bank',
-        'security' => 'Security',
-        'documents' => 'Documents',
-    ] as $id => $label)
-        <button class="tab-btn" data-tab="{{ $id }}">
-            {{ $label }}
-        </button>
-    @endforeach
-</div>
-
-
-<div id="account-panels">
-
-    {{-- =========================================================
-         PROFILE
-    ========================================================== --}}
-    <div class="tab-panel" id="profile">
-
-        <div class="card" style="margin-bottom:20px;">
-            <div class="profile-head">
-
-                <div class="profile-avatar">
-                    {{ strtoupper(substr($user->name, 0, 1)) }}
-                </div>
-
+        {{-- ================= PROFILE ================= --}}
+        <div class="tab-panel active" id="profile">
+            <div class="id-head">
+                <div class="id-avatar">{{ strtoupper(substr($user->name, 0, 1)) }}</div>
                 <div>
-                    <div style="font-weight:700;font-size:1.1rem;">
-                        {{ $user->name }}
-                    </div>
-
-                    <div class="muted" style="font-size:.85rem;">
-                        {{ $user->email }}
-                    </div>
-
-                    <div class="muted" style="font-size:.78rem;margin-top:2px;">
-                        Member since {{ $user->created_at->format('M Y') }}
-                    </div>
+                    <div class="id-name">{{ $user->name }}</div>
+                    <div class="id-meta">{{ $user->email }}</div>
+                    <div class="id-meta">Member since {{ $user->created_at->format('M Y') }}</div>
                 </div>
+                <span class="badge {{ $kyc === 'verified' ? 'positive' : 'neutral' }}">{{ ucfirst($kyc) }}</span>
+            </div>
 
-                <span
-                    class="badge {{ $user->kyc_status === 'verified' ? 'positive' : 'neutral' }}"
-                    style="margin-left:auto;"
-                >
-                    {{ ucfirst($user->kyc_status ?? 'Unverified') }}
-                </span>
-
+            <div class="sec">
+                <div>
+                    <h2>Personal information</h2>
+                    <div class="lede">Used for your account and for regulatory checks. Keep it accurate and up to date.</div>
+                </div>
+                <form action="{{ route('account.profile') }}" method="POST" id="profileForm">
+                    @csrf
+                    @method('PUT')
+                    <div class="field-row-2">
+                        <div class="field"><label for="name">Full name</label>
+                            <input type="text" id="name" name="name" value="{{ old('name', $user->name) }}" required autocomplete="name"></div>
+                        <div class="field"><label for="email">Email address</label>
+                            <input type="email" id="email" name="email" value="{{ old('email', $user->email) }}" required autocomplete="email"></div>
+                    </div>
+                    <div class="field-row-2">
+                        <div class="field"><label for="phone">Phone number</label>
+                            <input type="tel" id="phone" name="phone" value="{{ old('phone', $user->phone) }}" placeholder="+40 7xx xxx xxx" autocomplete="tel"></div>
+                        <div class="field"><label for="dob">Date of birth</label>
+                            <input type="date" id="dob" name="dob" value="{{ old('dob', optional($user->dob)->format('Y-m-d')) }}" autocomplete="bday"></div>
+                    </div>
+                    <div class="field-row-2">
+                        <div class="field"><label for="country">Country of residence</label>
+                            {{-- Hardcoded: country list is a short static set. Replace with the full supported-countries list. --}}
+                            <select id="country" name="country">
+                                @foreach($countries as $country)
+                                    <option value="{{ $country }}" {{ $currentCountry === $country ? 'selected' : '' }}>{{ $country }}</option>
+                                @endforeach
+                            </select></div>
+                        <div class="field"><label for="address">Address</label>
+                            <input type="text" id="address" name="address" value="{{ old('address', $user->address) }}" placeholder="Street, city, postal code" autocomplete="street-address"></div>
+                    </div>
+                    <button type="submit" class="btn btn-gold" id="profileSave" disabled>Save changes</button>
+                </form>
             </div>
         </div>
 
-
-        <form action="{{ route('account.profile') }}" method="POST" class="card">
-            @csrf
-            @method('PUT')
-
-            <div class="section-title">Personal information</div>
-
-            <div class="field-row-2">
-
-                <div class="field">
-                    <label for="name">Full name</label>
-                    <input
-                        type="text"
-                        id="name"
-                        name="name"
-                        value="{{ old('name', $user->name) }}"
-                        required
-                    >
-                </div>
-
-                <div class="field">
-                    <label for="email">Email address</label>
-                    <input
-                        type="email"
-                        id="email"
-                        name="email"
-                        value="{{ old('email', $user->email) }}"
-                        required
-                    >
-                </div>
-
-            </div>
-
-            <div class="field-row-2">
-
-                <div class="field">
-                    <label for="phone">Phone number</label>
-                    <input
-                        type="tel"
-                        id="phone"
-                        name="phone"
-                        value="{{ old('phone', $user->phone) }}"
-                        placeholder="+40 7xx xxx xxx"
-                    >
-                </div>
-
-                <div class="field">
-                    <label for="dob">Date of birth</label>
-                    <input
-                        type="date"
-                        id="dob"
-                        name="dob"
-                        value="{{ old('dob', optional($user->dob)->format('Y-m-d')) }}"
-                    >
-                </div>
-
-            </div>
-
-            <div class="field-row-2">
-
-                <div class="field">
-                    <label for="country">Country of residence</label>
-
-                    <select id="country" name="country">
-                        @foreach(['Romania', 'Italy', 'France', 'Spain', 'Other'] as $country)
-                            <option
-                                value="{{ $country }}"
-                                {{ old('country', $user->country) === $country ? 'selected' : '' }}
-                            >
-                                {{ $country }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
-
-                <div class="field">
-                    <label for="address">Address</label>
-                    <input
-                        type="text"
-                        id="address"
-                        name="address"
-                        value="{{ old('address', $user->address) }}"
-                        placeholder="Street, city, postal code"
-                    >
-                </div>
-
-            </div>
-
-            <button type="submit" class="btn btn-gold" style="margin-top:4px;">
-                Save changes
-            </button>
-        </form>
-
-    </div>
-
-
-    {{-- =========================================================
-         VERIFICATION
-    ========================================================== --}}
-    <div class="tab-panel" id="verification">
-
-        @php
-            $identityVerified = (bool) $user->identity_verified;
-        @endphp
-
-        <div class="card">
-
-            <div class="card-header">
-
+        {{-- ================= VERIFICATION ================= --}}
+        <div class="tab-panel" id="verification">
+            <div class="sec">
                 <div>
-                    <div class="section-title" style="margin-bottom:2px;">
-                        Identity verification
+                    <h2>Identity verification</h2>
+                    <div class="lede">
+                        @if($identityVerified) Your identity has been verified. @else Verify your identity to unlock higher investment limits. @endif
                     </div>
-
-                    <div class="muted" style="font-size:.85rem;">
+                </div>
+                <div>
+                    <div class="row">
+                        <div class="grow">
+                            <div class="t">Identity document and selfie</div>
+                            <div class="s">Checked securely through Stripe Identity. Saturn does not store your document images.</div>
+                        </div>
                         @if($identityVerified)
-                            Your identity has been successfully verified.
+                            <span class="badge positive">Verified</span>
                         @else
-                            Verify your identity to unlock higher investment limits.
+                            <a href="{{ route('account.identity.start') }}" class="btn btn-gold btn-sm btn-link">Verify identity</a>
                         @endif
                     </div>
                 </div>
-
-                <span class="badge {{ $identityVerified ? 'positive' : 'neutral' }}">
-                    {{ $identityVerified ? 'Verified' : 'Incomplete' }}
-                </span>
-
             </div>
-
-
-            <div class="list-row">
-
-                <div>
-                    <div class="primary">
-                        Identity verification
-                    </div>
-
-                    <div class="secondary">
-                        Your identity document and matching selfie are securely verified through Stripe Identity.
-                    </div>
-                </div>
-
-                @if($identityVerified)
-
-                    <span class="badge positive">
-                        Verified
-                    </span>
-
-                @else
-
-                    <a
-                        href="{{ route('account.identity.start') }}"
-                        class="btn btn-outline btn-sm"
-                    >
-                        Verify identity
-                    </a>
-
-                @endif
-
-            </div>
-
         </div>
 
-    </div>
-
-
-    {{-- =========================================================
-         BANK
-    ========================================================== --}}
-    <div class="tab-panel" id="bank">
-
-        <div class="card" style="margin-bottom:20px;">
-
-            <div class="card-header">
-
+        {{-- ================= BANK ================= --}}
+        <div class="tab-panel" id="bank">
+            <div class="sec">
                 <div>
-                    <div class="section-title">
-                        Linked bank accounts
-                    </div>
-
-                    <div class="muted" style="font-size:.82rem;margin-top:4px;">
-                        Bank details are collected securely by Stripe.
-                    </div>
+                    <h2>Linked bank accounts</h2>
+                    <div class="lede">Bank details are collected securely by Stripe.</div>
                 </div>
-
-                <button
-                    type="button"
-                    class="btn btn-outline btn-sm"
-                    onclick="openBankModal()"
-                >
-                    {{ count($stripeBankAccounts) ? 'Add / update bank' : 'Add bank account' }}
-                </button>
-
+                <div>
+                    @forelse($stripeBankAccounts as $bank)
+                        <div class="row">
+                            <div class="grow">
+                                <div class="t">{{ $bank['bank_name'] }}</div>
+                                <div class="s num">•••• {{ $bank['last4'] }} · {{ strtoupper($bank['currency']) }}</div>
+                            </div>
+                            @if($bank['default_for_currency'])<span class="badge positive">Primary</span>@endif
+                        </div>
+                    @empty
+                        <div class="empty" style="padding-top:0;"><strong>No bank account connected</strong>Connect one through Stripe to enable withdrawals.</div>
+                    @endforelse
+                    <button type="button" class="btn btn-outline btn-sm" style="margin-top:16px;" onclick="openModal('add-bank-modal')">
+                        {{ count($stripeBankAccounts) ? 'Add / update bank' : 'Add bank account' }}
+                    </button>
+                </div>
             </div>
 
+            <div class="sec">
+                <div>
+                    <h2>Withdrawals</h2>
+                    <div class="lede">Sent to your verified primary bank account.</div>
+                </div>
+                <div>
+                    <div class="eyebrow">Available cash</div>
+                    <div class="num" style="font-size:1.6rem; font-weight:300; letter-spacing:-.02em; margin:6px 0 16px;">€{{ number_format($user->balance ?? 0, 2) }}</div>
 
-            @forelse($stripeBankAccounts as $bank)
-
-                <div class="list-row">
-
-                    <div>
-                        <div class="primary">
-                            {{ $bank['bank_name'] }}
-                        </div>
-
-                        <div class="secondary">
-                            •••• {{ $bank['last4'] }}
-                            · {{ strtoupper($bank['currency']) }}
-                        </div>
-                    </div>
-
-                    @if($bank['default_for_currency'])
-                        <span class="badge positive">Primary</span>
+                    @if(!$user->stripe_account_id)
+                        <p class="state">Connect a bank account to enable withdrawals.</p>
+                        <button type="button" class="btn btn-gold btn-sm" style="margin-top:14px;" onclick="openModal('add-bank-modal')">Connect bank account</button>
+                    @elseif(!$payoutsReady)
+                        <p class="state">Your Stripe payout setup is not complete yet.</p>
+                        <a href="{{ route('account.stripe.onboarding') }}" class="btn btn-gold btn-sm btn-link" style="margin-top:14px;">Complete bank setup</a>
+                    @elseif(count($stripeBankAccounts) === 0)
+                        <p class="state">Your Stripe account is ready, but no bank account is available for withdrawals.</p>
+                        <button type="button" class="btn btn-gold btn-sm" style="margin-top:14px;" onclick="openModal('add-bank-modal')">Add bank account</button>
+                    @elseif(($user->balance ?? 0) <= 0)
+                        <button type="button" class="btn btn-gold btn-sm" disabled>Withdraw funds</button>
+                        <p class="state" style="margin-top:10px;">You have no available balance to withdraw.</p>
+                    @else
+                        <a href="{{ route('withdraw.show') }}" class="btn btn-gold btn-sm btn-link">Withdraw funds</a>
                     @endif
-
                 </div>
-
-            @empty
-
-                <div class="muted" style="padding:16px 0;font-size:.88rem;line-height:1.6;">
-                    No bank account is connected yet.
-                    <br>
-                    Connect your bank account through Stripe to enable withdrawals.
-                </div>
-
-            @endforelse
-
-        </div>
-
-
-        <div class="card">
-
-            <div class="section-title">
-                Withdrawals
-            </div>
-
-            <p class="muted" style="font-size:.88rem;line-height:1.6;">
-                Withdrawals are sent to your verified primary bank account.
-                <br>
-                Available cash:
-                <strong style="color:var(--ivory);">
-                    €{{ number_format($user->balance ?? 0, 2) }}
-                </strong>
-            </p>
-
-
-            @if(!$user->stripe_account_id)
-
-                <div class="muted" style="margin-top:14px;font-size:.82rem;">
-                    Connect a bank account to enable withdrawals.
-                </div>
-
-                <button
-                    type="button"
-                    class="btn btn-gold btn-sm"
-                    style="margin-top:16px;"
-                    onclick="openBankModal()"
-                >
-                    Connect bank account
-                </button>
-
-
-            @elseif(!$payoutsReady)
-
-                <div class="muted" style="margin-top:14px;font-size:.82rem;">
-                    Your Stripe payout setup is not complete yet.
-                </div>
-
-                <a
-                    href="{{ route('account.stripe.onboarding') }}"
-                    class="btn btn-gold btn-sm"
-                    style="margin-top:16px;display:inline-block;text-decoration:none;"
-                >
-                    Complete bank setup
-                </a>
-
-
-            @elseif(count($stripeBankAccounts) === 0)
-
-                <div class="muted" style="margin-top:14px;font-size:.82rem;">
-                    Your Stripe account is ready, but no bank account is currently available for withdrawals.
-                </div>
-
-                <button
-                    type="button"
-                    class="btn btn-gold btn-sm"
-                    style="margin-top:16px;"
-                    onclick="openBankModal()"
-                >
-                    Add bank account
-                </button>
-
-
-            @elseif(($user->balance ?? 0) <= 0)
-
-                <button
-                    type="button"
-                    class="btn btn-gold btn-sm"
-                    style="margin-top:16px;opacity:.5;"
-                    disabled
-                >
-                    Withdraw Funds
-                </button>
-
-                <div class="muted" style="margin-top:8px;font-size:.8rem;">
-                    You have no available balance to withdraw.
-                </div>
-
-
-            @else
-
-                <a
-                    href="{{ route('withdraw.show') }}"
-                    class="btn btn-gold btn-sm"
-                    style="margin-top:16px;display:inline-block;text-decoration:none;"
-                >
-                    Withdraw Funds
-                </a>
-
-            @endif
-
-        </div>
-
-    </div>
-
-
-    {{-- =========================================================
-         SECURITY
-    ========================================================== --}}
-    <div class="tab-panel" id="security">
-
-        <form
-            action="{{ route('account.password') }}"
-            method="POST"
-            class="card"
-            style="margin-bottom:20px;"
-        >
-            @csrf
-            @method('PUT')
-
-            <div class="section-title">
-                Change password
-            </div>
-
-            <div class="field">
-                <label for="current_password">Current password</label>
-
-                <input
-                    type="password"
-                    id="current_password"
-                    name="current_password"
-                    placeholder="••••••••"
-                    required
-                >
-            </div>
-
-            <div class="field-row-2">
-
-                <div class="field">
-                    <label for="new_password">New password</label>
-
-                    <input
-                        type="password"
-                        id="new_password"
-                        name="new_password"
-                        placeholder="••••••••"
-                        required
-                    >
-                </div>
-
-                <div class="field">
-                    <label for="new_password_confirmation">
-                        Confirm new password
-                    </label>
-
-                    <input
-                        type="password"
-                        id="new_password_confirmation"
-                        name="new_password_confirmation"
-                        placeholder="••••••••"
-                        required
-                    >
-                </div>
-
-            </div>
-
-            <button type="submit" class="btn btn-gold" style="margin-top:4px;">
-                Update password
-            </button>
-        </form>
-
-
-        <div class="card" style="margin-bottom:20px;">
-    <div class="list-row" style="border-bottom:none; align-items:center;">
-        <div>
-            <div class="primary">
-                Two-factor authentication
-            </div>
-            <div class="secondary">
-                @if($user->two_factor_confirmed_at)
-                    Protected by an authenticator app.
-                @else
-                    Require a code from your authenticator app when logging in.
-                @endif
             </div>
         </div>
 
-        <div>
-            @if($user->two_factor_confirmed_at)
-                <form action="{{ route('account.2fa.disable') }}" method="POST">
+        {{-- ================= SECURITY ================= --}}
+        <div class="tab-panel" id="security">
+            <div class="sec">
+                <div>
+                    <h2>Password</h2>
+                    <div class="lede">Use a long, unique password that you don't use anywhere else.</div>
+                </div>
+                <form action="{{ route('account.password') }}" method="POST" id="pwForm">
                     @csrf
-                    @method('DELETE')
-                    <button type="submit" class="btn btn-danger-outline btn-sm">Disable 2FA</button>
+                    @method('PUT')
+                    <div class="field"><label for="current_password">Current password</label>
+                        <input type="password" id="current_password" name="current_password" placeholder="••••••••" required autocomplete="current-password"></div>
+                    <div class="field-row-2">
+                        <div class="field"><label for="new_password">New password</label>
+                            <input type="password" id="new_password" name="new_password" placeholder="••••••••" required autocomplete="new-password"></div>
+                        <div class="field"><label for="new_password_confirmation">Confirm new password</label>
+                            <input type="password" id="new_password_confirmation" name="new_password_confirmation" placeholder="••••••••" required autocomplete="new-password">
+                            <div class="hint" id="pwHint" aria-live="polite"></div></div>
+                    </div>
+                    <button type="submit" class="btn btn-gold" id="pwSave" disabled>Update password</button>
                 </form>
-            @else
-                <button type="button" class="btn btn-gold btn-sm" onclick="open2faModal()">
-                    Enable 2FA
-                </button>
-            @endif
-        </div>
-    </div>
-</div>
-
-
-        <div class="card">
-
-            <div class="section-title">
-                Active sessions
             </div>
 
-            @forelse($sessions as $session)
-
-                @php
-                    $currentSession = $session->id === request()->session()->getId();
-                @endphp
-
-                <div class="list-row">
-
-                    <div style="overflow:hidden;">
-
-                        <div
-                            class="primary"
-                            style="white-space:nowrap;text-overflow:ellipsis;overflow:hidden;"
-                        >
-                            {{ \Illuminate\Support\Str::limit(
-                                $session->user_agent ?? 'Unknown device',
-                                45
-                            ) }}
-
-                            @if($currentSession)
-                                <span class="badge positive" style="margin-left:6px;">
-                                    This device
-                                </span>
-                            @endif
-                        </div>
-
-                        <div class="secondary">
-                            IP: {{ $session->ip_address ?? 'Unknown' }}
-                            ·
-                            Last active
-                            {{ \Carbon\Carbon::createFromTimestamp($session->last_activity)->diffForHumans() }}
-                        </div>
-
+            <div class="sec">
+                <div>
+                    <h2>Two-factor authentication</h2>
+                    <div class="lede">Adds a second step at login using an authenticator app.</div>
+                </div>
+                <div class="row" style="border-top:0; padding-top:0;">
+                    <div class="grow">
+                        <div class="t">{{ $twoFactorOn ? 'Enabled' : 'Not enabled' }}</div>
+                        <div class="s">{{ $twoFactorOn ? 'Protected by an authenticator app.' : 'Require a code from your authenticator app when logging in.' }}</div>
                     </div>
-
-                    @unless($currentSession)
-
-                        <form
-                            action="{{ route('account.session.destroy', $session->id) }}"
-                            method="POST"
-                        >
+                    @if($twoFactorOn)
+                        <form action="{{ route('account.2fa.disable') }}" method="POST" onsubmit="return confirm('Disable two-factor authentication? Your account will be less protected.');">
                             @csrf
                             @method('DELETE')
-
-                            <button
-                                type="submit"
-                                class="btn btn-danger-outline btn-sm"
-                            >
-                                Log out
-                            </button>
+                            <button type="submit" class="btn btn-danger-outline btn-sm">Disable 2FA</button>
                         </form>
-
-                    @endunless
-
+                    @else
+                        <button type="button" class="btn btn-gold btn-sm" onclick="openModal('enable-2fa-modal')">Enable 2FA</button>
+                    @endif
                 </div>
+            </div>
 
-            @empty
-
-                <div class="muted" style="padding:12px 0;font-size:.88rem;">
-                    No active sessions found.
+            <div class="sec">
+                <div>
+                    <h2>Active sessions</h2>
+                    <div class="lede">Devices currently signed in. Log out any you don't recognise.</div>
                 </div>
+                <div>
+                    @forelse($sessions as $session)
+                        @php $currentSession = $session->id === request()->session()->getId(); @endphp
+                        <div class="row">
+                            <div class="grow">
+                                <div class="t ellip">
+                                    {{ \Illuminate\Support\Str::limit($session->user_agent ?? 'Unknown device', 45) }}
+                                    @if($currentSession)<span class="badge positive" style="margin-left:6px;">This device</span>@endif
+                                </div>
+                                <div class="s">IP {{ $session->ip_address ?? 'Unknown' }} · Last active {{ \Carbon\Carbon::createFromTimestamp($session->last_activity)->diffForHumans() }}</div>
+                            </div>
+                            @unless($currentSession)
+                                <form action="{{ route('account.session.destroy', $session->id) }}" method="POST" onsubmit="return confirm('Log out this device?');">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="btn btn-danger-outline btn-sm">Log out</button>
+                                </form>
+                            @endunless
+                        </div>
+                    @empty
+                        <div class="empty" style="padding-top:0;">No active sessions found.</div>
+                    @endforelse
+                </div>
+            </div>
+        </div>
 
-            @endforelse
-
+        {{-- ================= DOCUMENTS ================= --}}
+        <div class="tab-panel" id="documents">
+            @php
+                // Hardcoded: no documents source is wired up yet. Pass $documents from the controller as
+                // [['title' => ..., 'type' => ..., 'date' => ..., 'url' => ...], ...]. The old sample list was fake and its buttons did nothing.
+                $documents = collect($documents ?? []);
+            @endphp
+            <div class="sec">
+                <div>
+                    <h2>Documents</h2>
+                    <div class="lede">Statements, agreements and tax summaries related to your account.</div>
+                </div>
+                <div>
+                    @forelse($documents as $doc)
+                        <div class="row">
+                            <div class="grow">
+                                <div class="t ellip">{{ $doc['title'] }}</div>
+                                <div class="s">{{ $doc['type'] }} · {{ $doc['date'] }}</div>
+                            </div>
+                            <a href="{{ $doc['url'] }}" class="btn btn-outline btn-sm btn-link">Download</a>
+                        </div>
+                    @empty
+                        <div class="empty" style="padding-top:0;"><strong>No documents available yet</strong>Statements and agreements will appear here once they are issued.</div>
+                    @endforelse
+                </div>
+            </div>
         </div>
 
     </div>
-
-
-    {{-- =========================================================
-         DOCUMENTS
-    ========================================================== --}}
-    <div class="tab-panel" id="documents">
-
-        <div class="card">
-
-            <table>
-
-                <thead>
-                    <tr>
-                        <th>Document</th>
-                        <th>Type</th>
-                        <th>Date</th>
-                        <th></th>
-                    </tr>
-                </thead>
-
-                <tbody>
-
-                    @foreach([
-                        ['Q2 2026 Distribution Statement', 'Statement', 'Jul 5, 2026'],
-                        ['Investment Agreement — Bucharest Hotel', 'Contract', 'May 12, 2022'],
-                        ['Investment Agreement — Solar Farm #12', 'Contract', 'Feb 20, 2025'],
-                        ['2025 Tax Summary', 'Tax', 'Jan 31, 2026'],
-                        ['Proof of Identity.pdf', 'KYC', 'Jan 3, 2022'],
-                    ] as [$document, $type, $date])
-
-                        <tr>
-                            <td style="font-weight:700;">
-                                {{ $document }}
-                            </td>
-
-                            <td class="muted">
-                                {{ $type }}
-                            </td>
-
-                            <td class="muted">
-                                {{ $date }}
-                            </td>
-
-                            <td>
-                                <button
-                                    type="button"
-                                    class="btn btn-outline btn-sm"
-                                >
-                                    Download
-                                </button>
-                            </td>
-                        </tr>
-
-                    @endforeach
-
-                </tbody>
-
-            </table>
-
-        </div>
-
-    </div>
-
 </div>
 
-
-{{-- =========================================================
-     2FA SETUP MODAL
-========================================================== --}}
-<div class="modal-backdrop" id="enable-2fa-modal">
-    <div class="modal-box" style="max-width: 400px; text-align: center;">
-        
-        <div class="section-title" style="margin-bottom:12px;">
-            Set up Two-Factor Authentication
-        </div>
-
-        <p class="muted" style="font-size:.88rem; line-height:1.6; margin-bottom:16px;">
-            Scan this QR code with your authenticator app (like Google Authenticator or Authy), then enter the 6-digit code below.
-        </p>
-
-        {{-- QR Code Container --}}
-        <div id="qr-code-container" style="margin:16px 0;background:#fff;padding:12px;display:inline-block;border-radius:8px;">
-    {!! $twoFactorQr !!}
-</div>
-
-<p class="muted" style="font-size:.78rem;">
-    Can't scan? Enter this key manually:<br>
-    <code style="color:var(--ivory);">{{ $twoFactorSecret }}</code>
-</p>
-
+{{-- ================= MODALS ================= --}}
+<div class="modal-backdrop" id="enable-2fa-modal" role="dialog" aria-modal="true" aria-labelledby="m2fa-title">
+    <div class="modal-box" style="max-width:400px; text-align:center;">
+        <h3 id="m2fa-title">Set up two-factor authentication</h3>
+        <p>Scan this QR code with an authenticator app such as Google Authenticator or Authy, then enter the 6-digit code.</p>
+        <div id="qr-code-container" style="margin:18px 0; background:#fff; padding:12px; display:inline-block; border-radius:8px;">{!! $twoFactorQr ?? '' !!}</div>
+        <p style="font-size:.78rem;">Can't scan? Enter this key manually:<br><code style="color:var(--ivory); word-break:break-all;">{{ $twoFactorSecret ?? '' }}</code></p>
         <form action="{{ route('account.2fa.enable') }}" method="POST">
             @csrf
-
-            <div class="field" style="text-align: left; margin-top: 12px;">
-                <label for="code">Verification Code</label>
-                <input type="text" id="code" name="code" placeholder="123456" required autocomplete="one-time-code" maxlength="6" style="text-align: center; letter-spacing: 2px; font-size: 1.1rem;">
+            <div class="field" style="text-align:left; margin-top:18px; margin-bottom:0;">
+                <label for="code">Verification code</label>
+                <input type="text" id="code" name="code" placeholder="123456" required autocomplete="one-time-code" inputmode="numeric" maxlength="6" style="text-align:center; letter-spacing:4px; font-size:1.1rem;">
             </div>
-
-            <div style="display:flex; gap:10px; justify-content:flex-end; margin-top: 20px;">
-                <button type="button" class="btn btn-outline" onclick="close2faModal()">
-                    Cancel
-                </button>
-                <button type="submit" class="btn btn-gold">
-                    Verify and Enable
-                </button>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-outline" onclick="closeModal('enable-2fa-modal')">Cancel</button>
+                <button type="submit" class="btn btn-gold">Verify and enable</button>
             </div>
         </form>
-
     </div>
 </div>
 
-
-{{-- =========================================================
-     RECOVERY CODES MODAL (Shown once after enabling 2FA)
-========================================================== --}}
 @if(session('recovery_codes'))
-<div class="modal-backdrop active" id="recovery-codes-modal">
-    <div class="modal-box" style="max-width: 440px; text-align: center;">
-        
-        <div class="section-title" style="margin-bottom:12px; color: var(--gold);">
-            Save Your Recovery Codes
-        </div>
-
-        <p class="muted" style="font-size:.85rem; line-height:1.5; margin-bottom:16px;">
-            Store these recovery codes in a secure password manager. If you lose access to your authenticator device, you can use these codes to log in. <strong style="color:var(--red);">They will not be shown again.</strong>
-        </p>
-
-        <div style="background: rgba(0,0,0,0.4); border: 1px solid var(--card-border); border-radius: 8px; padding: 14px; margin-bottom: 20px; text-align: left; display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
-            @foreach(session('recovery_codes') as $code)
-                <code style="font-size: 0.82rem; color: var(--ivory); font-family: monospace;">{{ $code }}</code>
-            @endforeach
-        </div>
-
-        <button type="button" class="btn btn-gold" style="width: 100%;" onclick="document.getElementById('recovery-codes-modal').classList.remove('active')">
-            I have saved these codes
-        </button>
-
+<div class="modal-backdrop active" id="recovery-codes-modal" role="dialog" aria-modal="true" aria-labelledby="rc-title">
+    <div class="modal-box" style="max-width:440px; text-align:center;">
+        <h3 id="rc-title" style="color:var(--gold);">Save your recovery codes</h3>
+        <p>Store these in a secure password manager. If you lose your authenticator device, you can use them to log in. <strong style="color:var(--red);">They will not be shown again.</strong></p>
+        <div class="codes">@foreach(session('recovery_codes') as $code)<code>{{ $code }}</code>@endforeach</div>
+        <button type="button" class="btn btn-gold btn-block" onclick="closeModal('recovery-codes-modal')">I have saved these codes</button>
     </div>
 </div>
 @endif
 
-
-{{-- =========================================================
-     BANK MODAL
-========================================================== --}}
-<div class="modal-backdrop" id="add-bank-modal">
-
+<div class="modal-backdrop" id="add-bank-modal" role="dialog" aria-modal="true" aria-labelledby="mb-title">
     <div class="modal-box">
-
-        <div class="section-title" style="margin-bottom:16px;">
-            Connect Bank Account
+        <h3 id="mb-title">Connect bank account</h3>
+        <p>Your bank account is connected securely through Stripe. Saturn does not collect or store your full IBAN.</p>
+        <div class="modal-actions">
+            <button type="button" class="btn btn-outline" onclick="closeModal('add-bank-modal')">Cancel</button>
+            <a href="{{ route('account.stripe.onboarding') }}" class="btn btn-gold btn-link">Continue with Stripe</a>
         </div>
-
-        <p
-            class="muted"
-            style="font-size:.88rem;line-height:1.6;margin-bottom:20px;"
-        >
-            Your bank account will be securely connected through Stripe.
-            Saturn does not collect or store your full IBAN.
-        </p>
-
-        <div style="display:flex;gap:10px;justify-content:flex-end;">
-
-            <button
-                type="button"
-                class="btn btn-outline"
-                onclick="closeBankModal()"
-            >
-                Cancel
-            </button>
-
-            <a
-                href="{{ route('account.stripe.onboarding') }}"
-                class="btn btn-gold"
-                style="text-decoration:none;"
-            >
-                Continue with Stripe
-            </a>
-
-        </div>
-
     </div>
-
 </div>
+@endsection
 
-
+@push('scripts')
 <script>
-function openBankModal() {
-    document.getElementById('add-bank-modal').classList.add('active');
-}
-
-function closeBankModal() {
-    document.getElementById('add-bank-modal').classList.remove('active');
-}
-
-function open2faModal() {
-    document.getElementById('enable-2fa-modal').classList.add('active');
-}
-
-function close2faModal() {
-    document.getElementById('enable-2fa-modal').classList.remove('active');
-}
+function openModal(id) { document.getElementById(id).classList.add('active'); }
+function closeModal(id) { document.getElementById(id).classList.remove('active'); }
 
 document.addEventListener('DOMContentLoaded', function () {
-    // Backdrop click handlers
-    const modal = document.getElementById('add-bank-modal');
-    if (modal) {
-        modal.addEventListener('click', function (event) {
-            if (event.target === modal) closeBankModal();
-        });
-    }
+    // Backdrop click + Escape close
+    document.querySelectorAll('.modal-backdrop').forEach(m => m.addEventListener('click', e => { if (e.target === m) m.classList.remove('active'); }));
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') document.querySelectorAll('.modal-backdrop.active').forEach(m => m.classList.remove('active')); });
 
-    const modal2fa = document.getElementById('enable-2fa-modal');
-    if (modal2fa) {
-        modal2fa.addEventListener('click', function (event) {
-            if (event.target === modal2fa) close2faModal();
-        });
-    }
-
-    // Auto-reopen 2FA setup modal if validation failed
+    // Reopen the 2FA setup modal if validation failed
     @if(session('open_2fa'))
-        open2faModal();
+        openModal('enable-2fa-modal');
     @endif
+
+    // Profile: enable Save only when something changed
+    const pf = document.getElementById('profileForm');
+    if (pf) {
+        const save = document.getElementById('profileSave');
+        const snap = () => JSON.stringify(Array.from(pf.querySelectorAll('input:not([type=hidden]), select')).map(i => i.value));
+        const initial = snap();
+        const check = () => { save.disabled = snap() === initial; };
+        pf.addEventListener('input', check); pf.addEventListener('change', check);
+        // after a failed validation the old() values already differ from the saved ones, so leave the button usable
+        @if($errors->any()) save.disabled = false; @endif
+    }
+
+    // Password: confirm must match before submitting
+    const np = document.getElementById('new_password'), cp = document.getElementById('new_password_confirmation'),
+          cur = document.getElementById('current_password'), hint = document.getElementById('pwHint'), pwSave = document.getElementById('pwSave');
+    if (np && cp) {
+        const check = () => {
+            const mismatch = cp.value.length > 0 && np.value !== cp.value;
+            hint.textContent = mismatch ? 'Passwords do not match.' : '';
+            hint.classList.toggle('bad', mismatch);
+            pwSave.disabled = !(cur.value && np.value && cp.value && !mismatch);
+        };
+        [np, cp, cur].forEach(i => i.addEventListener('input', check));
+    }
 });
 </script>
-
-@endsection
+@endpush

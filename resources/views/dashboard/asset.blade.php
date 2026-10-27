@@ -2,597 +2,268 @@
 
 @section('title', $asset->title)
 
+@push('styles')
+<style>
+    .ast { --line: rgba(255,255,255,0.07); }
+    .ast .num { font-variant-numeric: tabular-nums; }
+    .ast .eyebrow { font-size: .64rem; text-transform: uppercase; letter-spacing: .12em; color: var(--slate); font-weight: 600; }
+
+    .back { display: inline-flex; align-items: center; gap: 6px; font-size: .82rem; color: var(--slate); font-weight: 600; margin-bottom: 24px; transition: color .15s; }
+    .back:hover { color: var(--gold); }
+    .back .icon { width: 14px; height: 14px; }
+
+    .a-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; flex-wrap: wrap; margin-bottom: 28px; }
+    .a-title { display: flex; align-items: center; gap: 12px; }
+    .a-title h1 { font-size: clamp(1.5rem, 3.4vw, 2.1rem); font-weight: 700; letter-spacing: -.02em; line-height: 1.15; }
+    .a-meta { font-size: .88rem; color: var(--slate); margin-top: 6px; }
+    .a-hero { border-radius: 12px; overflow: hidden; margin-bottom: 40px; }
+    .a-hero img { width: 100%; height: 400px; object-fit: cover; display: block; }
+
+    .a-grid { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 64px; align-items: start; }
+    .a-main > section { padding: 32px 0; border-top: 1px solid var(--line); }
+    .a-main > section:first-child { border-top: 0; padding-top: 0; }
+    .a-main h2, .a-side h2 { font-size: .95rem; font-weight: 700; margin-bottom: 14px; }
+    .a-text { font-size: .92rem; color: var(--slate); line-height: 1.75; max-width: 68ch; }
+
+    .dl { display: grid; grid-template-columns: 1fr 1fr; gap: 0 48px; }
+    .dl .r { display: flex; justify-content: space-between; gap: 12px; padding: 13px 0; border-top: 1px solid var(--line); font-size: .88rem; }
+    .dl .r span:first-child { color: var(--slate); }
+    .dl .r span:last-child { font-weight: 700; text-align: right; }
+
+    .bar { height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; }
+    .bar b { display: block; height: 100%; background: var(--gold); border-radius: 3px; }
+    .bar-row { display: flex; justify-content: space-between; font-size: .85rem; margin-bottom: 10px; gap: 12px; }
+
+    /* Buyout */
+    .buyout { border-left: 2px solid var(--gold); padding-left: 24px; }
+    .buyout .vote-bar { position: relative; height: 8px; background: var(--line); border-radius: 4px; overflow: visible; margin: 8px 0 12px; }
+    .buyout .vote-bar b { display: block; height: 100%; background: var(--green); border-radius: 4px; }
+    .buyout .vote-bar i { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--ivory); opacity: .6; }
+    .vote-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 16px; }
+    .alert { padding: 12px 16px; border-radius: 8px; font-size: .86rem; border: 1px solid; margin-top: 12px; }
+    .alert-success { background: var(--green-dim); border-color: rgba(74,222,128,.3); color: var(--green); }
+    .alert-error { background: var(--red-dim); border-color: rgba(248,113,113,.3); color: var(--red); }
+    .btn:disabled { opacity: .45; cursor: not-allowed; transform: none; box-shadow: none; }
+
+    /* Distributions */
+    .dist { display: grid; grid-template-columns: 1fr 1fr auto; gap: 16px; padding: 14px 0; border-top: 1px solid var(--line); font-size: .88rem; }
+    .dist-list > :last-child { border-bottom: 1px solid var(--line); }
+    .dist.head { border-top: 0; font-size: .64rem; text-transform: uppercase; letter-spacing: .12em; color: var(--slate); font-weight: 600; padding-top: 0; }
+    .dist .amt { text-align: right; font-weight: 700; }
+    .empty { padding: 28px 0; color: var(--slate); font-size: .88rem; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); text-align: center; }
+
+    /* Side panel */
+    .a-side { position: sticky; top: 96px; }
+    .pos-total { font-size: 2rem; font-weight: 300; letter-spacing: -.02em; margin: 6px 0 4px; }
+    .pos-gain { font-size: .86rem; font-weight: 600; }
+    .kv { display: flex; justify-content: space-between; gap: 12px; padding: 12px 0; border-top: 1px solid var(--line); font-size: .86rem; }
+    .kv span:first-child { color: var(--slate); }
+    .kv span:last-child { font-weight: 700; }
+    .side-block { padding-bottom: 28px; margin-bottom: 28px; border-bottom: 1px solid var(--line); }
+    .side-block:last-child { border-bottom: 0; margin-bottom: 0; padding-bottom: 0; }
+    .actions { display: flex; gap: 10px; margin-top: 20px; }
+    .state { font-size: .84rem; color: var(--slate); line-height: 1.6; margin-top: 12px; }
+
+    @media (max-width: 980px) {
+        .a-grid { grid-template-columns: 1fr; gap: 40px; }
+        .a-side { position: static; order: -1; }
+        .a-hero img { height: 260px; }
+    }
+    @media (max-width: 560px) {
+        .dl { grid-template-columns: 1fr; }
+        .vote-actions .btn { flex: 1; }
+    }
+</style>
+@endpush
+
 @section('content')
+@php
+    $fmt = fn($n) => '€' . number_format($n, 2);
 
-    <a href="/portfolio#holdings"
-       class="link-muted"
-       style="margin-bottom: 20px; display: inline-flex; align-items: center; gap: 6px;">
-        <svg class="icon" style="width: 14px; height: 14px;">
-            <use href="#icon-arrow-left"/>
-        </svg>
-        Back to holdings
-    </a>
+    $soldShares = $asset->total_shares - $asset->available_shares;
+    $fundingPercentage = $asset->total_shares > 0 ? ($soldShares / $asset->total_shares) * 100 : 0;
 
-    <!-- Asset Header -->
-    <div class="card-header"
-         style="align-items: flex-start; margin-bottom: 24px;">
+    $gainPct = ($totalInvested ?? 0) > 0 ? ($unrealizedGain / $totalInvested) * 100 : null;
+    $canBuy = $asset->status === 'active' && $asset->available_shares > 0;
 
+    // Kept from the original view; ideally move this query into the controller.
+    $activeBuyout = $asset->buyoutProposals()->whereIn('status', ['voting', 'approved_pending_payout'])->latest()->first();
+@endphp
+
+<div class="ast">
+
+    <a href="/portfolio#holdings" class="back"><svg class="icon"><use href="#icon-arrow-left"/></svg> Back to holdings</a>
+
+    <div class="a-head">
         <div>
-            <div style="display: flex; align-items: center; gap: 10px;">
-
-                <h2 style="
-                    font-size: 1.6rem;
-                    font-weight: 800;
-                    letter-spacing: -0.01em;
-                ">
-                    {{ $asset->title }}
-                </h2>
-
-                <button class="watch-toggle is-active">
-                    <svg class="icon">
-                        <use href="#icon-heart"/>
-                    </svg>
+            <div class="a-title">
+                <h1>{{ $asset->title }}</h1>
+                {{-- Hardcoded: no watchlist route is wired to this button yet, so it only changes appearance. --}}
+                <button type="button" class="watch-toggle {{ ($isWatched ?? false) ? 'is-active' : '' }}" aria-label="Add to watchlist" title="Add to watchlist">
+                    <svg class="icon"><use href="#icon-heart"/></svg>
                 </button>
-
             </div>
-
-            <div class="muted"
-                 style="font-size: 0.9rem; margin-top: 4px;">
-
-                {{ $asset->country ?? 'Global' }}
-                ·
-                {{ $asset->category }}
-
-            </div>
+            <div class="a-meta">{{ $asset->country ?? 'Global' }} · {{ $asset->category }}</div>
         </div>
-
-        <div style="
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-            justify-content: flex-end;
-        ">
-
-            <span class="badge neutral">
-                €{{ number_format($asset->total_valuation, 2) }} valuation
-            </span>
-
-            <span class="badge neutral">
-                €{{ number_format($asset->share_price, 2) }} / share
-            </span>
-
-            <span class="badge {{ $asset->status === 'active' ? 'positive' : 'neutral' }}">
-                {{ ucfirst($asset->status) }}
-            </span>
-
-        </div>
+        <span class="badge {{ $asset->status === 'active' ? 'positive' : 'neutral' }}">{{ ucfirst($asset->status) }}</span>
     </div>
 
-
-    <!-- Main Asset Image -->
     @if($asset->image)
-
-        <div class="card"
-             style="
-                padding: 0;
-                overflow: hidden;
-                margin-bottom: 24px;
-             ">
-
-            <img
-                src="{{ asset('storage/' . $asset->image) }}"
-                alt="{{ $asset->title }}"
-                style="
-                    width: 100%;
-                    height: 420px;
-                    object-fit: cover;
-                    display: block;
-                "
-            >
-
-        </div>
-
+        <div class="a-hero"><img src="{{ asset('storage/' . $asset->image) }}" alt="{{ $asset->title }}"></div>
     @endif
 
+    <div class="a-grid">
 
-    <!-- Main Grid -->
-    <div class="grid grid-2"
-         style="
-            align-items: start;
-            grid-template-columns: 2fr 1fr;
-         ">
+        {{-- ================= MAIN ================= --}}
+        <div class="a-main">
 
-        <!-- LEFT COLUMN -->
-        <div style="
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        ">
-
-            <!-- About -->
-            <div class="card">
-
-                <div class="section-title">
-                    About this opportunity
-                </div>
-
+            <section>
+                <h2>About this opportunity</h2>
                 @if($asset->description)
-
-                    <p class="muted"
-                       style="
-                            font-size: 0.9rem;
-                            line-height: 1.7;
-                            margin: 0;
-                       ">
-                        {{ $asset->description }}
-                    </p>
-
+                    <p class="a-text">{{ $asset->description }}</p>
                 @else
+                    <p class="a-text">No description has been provided for this opportunity yet.</p>
+                @endif
+            </section>
 
-                    <p class="muted"
-                       style="font-size: 0.9rem;">
-                        No description has been provided for this investment opportunity.
-                    </p>
+            <section>
+                <h2>Asset details</h2>
+                <div class="dl">
+                    <div class="r"><span>Category</span><span>{{ $asset->category }}</span></div>
+                    <div class="r"><span>Country</span><span>{{ $asset->country ?? 'Global' }}</span></div>
+                    <div class="r"><span>Total valuation</span><span class="num">{{ $fmt($asset->total_valuation) }}</span></div>
+                    <div class="r"><span>Share price</span><span class="num">{{ $fmt($asset->share_price) }}</span></div>
+                    <div class="r"><span>Total shares</span><span class="num">{{ number_format($asset->total_shares) }}</span></div>
+                    <div class="r"><span>Available shares</span><span class="num">{{ number_format($asset->available_shares) }}</span></div>
+                </div>
+            </section>
 
+            @if($activeBuyout)
+                @php
+                    $totalShares = $asset->total_shares;
+                    $yesVotes = $activeBuyout->totalYesVotes();
+                    $noVotes = $activeBuyout->totalNoVotes();
+                    $yesPercent = $totalShares > 0 ? round(($yesVotes / $totalShares) * 100, 1) : 0;
+                    $userVote = $activeBuyout->votes()->where('user_id', auth()->id())->first();
+                @endphp
+                <section>
+                    <div class="buyout">
+                        <div class="eyebrow" style="color: var(--gold);">Buyout offer</div>
+                        <h2 style="margin-top:6px;">{{ $fmt($activeBuyout->offered_amount) }} offered for 100% of {{ $asset->title }}</h2>
+                        <p class="a-text" style="margin-bottom:18px;">
+                            <strong style="color:var(--ivory);">{{ $activeBuyout->buyer_name }}</strong> has proposed to acquire the whole asset. Shareholders vote with one vote per share.
+                        </p>
+
+                        <div class="bar-row">
+                            <span>Yes votes <strong class="num">{{ number_format($yesVotes) }}</strong> · <span class="num">{{ $yesPercent }}%</span></span>
+                            {{-- Hardcoded: 66% approval threshold. --}}
+                            <span class="muted">66% required</span>
+                        </div>
+                        <div class="vote-bar" aria-label="{{ $yesPercent }}% yes votes of 66% required">
+                            <b style="width: {{ min(100, $yesPercent) }}%"></b>
+                            <i style="left: 66%;"></i>
+                        </div>
+
+                        @if($activeBuyout->status === 'approved_pending_payout')
+                            <div class="alert alert-success">The proposal passed. It is pending administrator execution and distribution of funds.</div>
+                        @elseif(now()->greaterThan($activeBuyout->voting_ends_at))
+                            <div class="alert alert-error">Voting has concluded. Awaiting final resolution.</div>
+                        @elseif($unitsOwned > 0)
+                            <form action="{{ route('buyout.vote', $activeBuyout->id) }}" method="POST" class="vote-actions">
+                                @csrf
+                                <span class="muted" style="font-size:.85rem;">Cast your <span class="num">{{ number_format($unitsOwned) }}</span> {{ Str::plural('vote', $unitsOwned) }}</span>
+                                <button type="submit" name="vote" value="yes" class="btn btn-gold btn-sm" {{ $userVote?->vote === 'yes' ? 'disabled' : '' }}>
+                                    {{ $userVote?->vote === 'yes' ? 'Voted yes' : 'Vote yes' }}
+                                </button>
+                                <button type="submit" name="vote" value="no" class="btn btn-outline btn-sm" {{ $userVote?->vote === 'no' ? 'disabled' : '' }}>
+                                    {{ $userVote?->vote === 'no' ? 'Voted no' : 'Vote no' }}
+                                </button>
+                            </form>
+                        @else
+                            <p class="state">Only current shareholders can vote on this proposal.</p>
+                        @endif
+                    </div>
+                </section>
+            @endif
+
+            <section>
+                <h2>Ownership</h2>
+                <div class="bar-row">
+                    <span class="muted"><span class="num">{{ number_format($soldShares) }}</span> of <span class="num">{{ number_format($asset->total_shares) }}</span> shares allocated</span>
+                    <strong class="num">{{ number_format($fundingPercentage, 1) }}%</strong>
+                </div>
+                <div class="bar"><b style="width: {{ min(100, max(0, $fundingPercentage)) }}%"></b></div>
+            </section>
+
+            <section>
+                <h2>Distribution history</h2>
+                @if(collect($distributions)->isNotEmpty())
+                    <div class="dist head"><span>Date</span><span>Type</span><span class="amt">Amount</span></div>
+                    <div class="dist-list">
+                        @foreach($distributions as $distribution)
+                            <div class="dist">
+                                <span class="num">{{ $distribution->created_at->format('M d, Y') }}</span>
+                                <span class="muted">Distribution</span>
+                                <span class="amt num">{{ $fmt($distribution->amount) }}</span>
+                            </div>
+                        @endforeach
+                    </div>
+                @else
+                    <div class="empty">No distributions have been paid for this asset yet.</div>
+                @endif
+            </section>
+
+        </div>
+
+        {{-- ================= SIDE ================= --}}
+        <aside class="a-side">
+
+            <div class="side-block">
+                <div class="eyebrow">Your position</div>
+                @if($unitsOwned > 0)
+                    <div class="pos-total num">{{ $fmt($currentValue) }}</div>
+                    <div class="pos-gain num {{ $unrealizedGain >= 0 ? 'positive' : 'negative' }}">
+                        {{ $unrealizedGain >= 0 ? '+' : '−' }}{{ $fmt(abs($unrealizedGain)) }}
+                        @if($gainPct !== null)({{ $unrealizedGain >= 0 ? '+' : '−' }}{{ number_format(abs($gainPct), 2) }}%)@endif
+                    </div>
+                    <div style="margin-top:18px;">
+                        <div class="kv"><span>Units owned</span><span class="num">{{ number_format($unitsOwned) }}</span></div>
+                        <div class="kv"><span>Invested</span><span class="num">{{ $fmt($totalInvested ?? 0) }}</span></div>
+                        <div class="kv"><span>Avg. purchase price</span><span class="num">{{ $fmt($avgPurchasePrice) }}</span></div>
+                        <div class="kv"><span>Current price</span><span class="num">{{ $fmt($asset->share_price) }}</span></div>
+                    </div>
+                @else
+                    <div class="pos-total num">{{ $fmt($asset->share_price) }}</div>
+                    <div class="state" style="margin-top:0;">per share. You don't hold units in this asset yet.</div>
                 @endif
 
-            </div>
-
-
-            <!-- Asset Details -->
-            <div class="card">
-
-                <div class="section-title">
-                    Asset details
-                </div>
-
-                <div class="grid grid-2"
-                     style="gap: 0 24px;">
-
-                    <div class="list-row">
-                        <div class="primary">
-                            Category
-                        </div>
-
-                        <div class="value">
-                            {{ $asset->category }}
-                        </div>
-                    </div>
-
-                    <div class="list-row">
-                        <div class="primary">
-                            Country
-                        </div>
-
-                        <div class="value">
-                            {{ $asset->country ?? 'Global' }}
-                        </div>
-                    </div>
-
-                    <div class="list-row">
-                        <div class="primary">
-                            Total valuation
-                        </div>
-
-                        <div class="value">
-                            €{{ number_format($asset->total_valuation, 2) }}
-                        </div>
-                    </div>
-
-                    <div class="list-row">
-                        <div class="primary">
-                            Share price
-                        </div>
-
-                        <div class="value">
-                            €{{ number_format($asset->share_price, 2) }}
-                        </div>
-                    </div>
-
-                    <div class="list-row">
-                        <div class="primary">
-                            Total shares
-                        </div>
-
-                        <div class="value">
-                            {{ number_format($asset->total_shares) }}
-                        </div>
-                    </div>
-
-                    <div class="list-row">
-                        <div class="primary">
-                            Available shares
-                        </div>
-
-                        <div class="value">
-                            {{ number_format($asset->available_shares) }}
-                        </div>
-                    </div>
-
-                </div>
-
-            </div>
-
-            <!-- BUYOUT PROPOSAL & VOTING CARD -->
-@if($activeBuyout = $asset->buyoutProposals()->whereIn('status', ['voting', 'approved_pending_payout'])->latest()->first())
-    <div class="card" style="border: 1px solid var(--gold); margin-bottom: 24px;">
-        <div class="section-title" style="color: var(--gold);">
-            Corporate Buyout Offer Active
-        </div>
-
-        <p class="muted" style="font-size: 0.88rem; margin-bottom: 16px;">
-            A buyout proposal has been made by <strong>{{ $activeBuyout->buyer_name }}</strong> to purchase 100% of {{ $asset->title }} for <strong>€{{ number_format($activeBuyout->offered_amount, 2) }}</strong>.
-        </p>
-
-        @php
-            $totalShares = $asset->total_shares;
-            $yesVotes = $activeBuyout->totalYesVotes();
-            $noVotes = $activeBuyout->totalNoVotes();
-            $yesPercent = $totalShares > 0 ? round(($yesVotes / $totalShares) * 100, 1) : 0;
-            $userVote = $activeBuyout->votes()->where('user_id', auth()->id())->first();
-        @endphp
-
-        <!-- Voting Progress Bar -->
-        <div style="margin-bottom: 16px;">
-            <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 6px;">
-                <span>YES Votes: <strong>{{ number_format($yesVotes) }}</strong> ({{ $yesPercent }}%)</span>
-                <span>Threshold required: <strong>66%</strong></span>
-            </div>
-            <div style="width: 100%; height: 10px; background: rgba(255,255,255,0.08); border-radius: 999px; overflow: hidden;">
-                <div style="width: {{ min(100, $yesPercent) }}%; height: 100%; background: #00e676;"></div>
-            </div>
-        </div>
-
-        @if($activeBuyout->status === 'approved_pending_payout')
-            <div class="alert alert-success">
-                Buyout proposal passed! Pending administrator execution and funds distribution.
-            </div>
-        @elseif(now()->greaterThan($activeBuyout->voting_ends_at))
-            <div class="alert alert-error">
-                Voting period concluded. Awaiting final resolution.
-            </div>
-        @elseif($unitsOwned > 0)
-            <!-- Voting Action Form -->
-            <form action="{{ route('buyout.vote', $activeBuyout->id) }}" method="POST" style="display: flex; gap: 12px; align-items: center;">
-                @csrf
-                <span class="muted" style="font-size: 0.85rem;">Cast your {{ number_format($unitsOwned) }} votes:</span>
-                <button type="submit" name="vote" value="yes" class="btn btn-gold btn-sm" {{ $userVote?->vote === 'yes' ? 'disabled' : '' }}>
-                    {{ $userVote?->vote === 'yes' ? 'Voted YES' : 'Vote YES' }}
-                </button>
-                <button type="submit" name="vote" value="no" class="btn btn-outline btn-sm" {{ $userVote?->vote === 'no' ? 'disabled' : '' }}>
-                    {{ $userVote?->vote === 'no' ? 'Voted NO' : 'Vote NO' }}
-                </button>
-            </form>
-        @else
-            <p class="muted" style="font-size: 0.82rem;">Only current shareholders are eligible to vote on this proposal.</p>
-        @endif
-    </div>
-@endif
-
-
-            <!-- Ownership -->
-            <div class="card">
-
-                <div class="section-title">
-                    Ownership
-                </div>
-
-                @php
-                    $soldShares = $asset->total_shares - $asset->available_shares;
-
-                    $fundingPercentage = $asset->total_shares > 0
-                        ? ($soldShares / $asset->total_shares) * 100
-                        : 0;
-                @endphp
-
-                <div style="
-                    display: flex;
-                    justify-content: space-between;
-                    margin-bottom: 8px;
-                    font-size: 0.9rem;
-                ">
-
-                    <span class="muted">
-                        {{ number_format($soldShares) }} shares allocated
-                    </span>
-
-                    <span>
-                        {{ number_format($fundingPercentage, 1) }}%
-                    </span>
-
-                </div>
-
-                <div style="
-                    width: 100%;
-                    height: 8px;
-                    background: rgba(255,255,255,0.08);
-                    border-radius: 999px;
-                    overflow: hidden;
-                ">
-
-                    <div style="
-                        width: {{ min(100, max(0, $fundingPercentage)) }}%;
-                        height: 100%;
-                        background: #C6A15B;
-                        border-radius: 999px;
-                    "></div>
-
-                </div>
-
-            </div>
-
-
-            <!-- Distribution History -->
-            <div class="card">
-
-                <div class="section-title">
-                    Distribution history
-                </div>
-
-                <table>
-
-                    <thead>
-                        <tr>
-                            <th>Date</th>
-                            <th>Type</th>
-                            <th>Amount</th>
-                        </tr>
-                    </thead>
-
-                    <tbody>
-
-                        @forelse($distributions as $distribution)
-
-                            <tr>
-
-                                <td>
-                                    {{ $distribution->created_at->format('M d, Y') }}
-                                </td>
-
-                                <td class="muted">
-                                    Distribution
-                                </td>
-
-                                <td>
-                                    €{{ number_format($distribution->amount, 2) }}
-                                </td>
-
-                            </tr>
-
-                        @empty
-
-                            <tr>
-                                <td colspan="3"
-                                    class="muted"
-                                    style="text-align: center; padding: 20px;">
-                                    No distribution history found.
-                                </td>
-                            </tr>
-
-                        @endforelse
-
-                    </tbody>
-
-                </table>
-
-            </div>
-
-        </div>
-
-
-        <!-- RIGHT COLUMN -->
-        <div style="
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        ">
-
-            <!-- Your Position -->
-            <div class="card">
-
-                <div class="section-title">
-                    Your position
-                </div>
-
-                <div class="list-row">
-                    <div class="primary">
-                        Units owned
-                    </div>
-
-                    <div class="value">
-                        {{ number_format($unitsOwned) }}
-                    </div>
-                </div>
-
-                <div class="list-row">
-                    <div class="primary">
-                        Current value
-                    </div>
-
-                    <div class="value">
-                        €{{ number_format($currentValue, 2) }}
-                    </div>
-                </div>
-
-                <div class="list-row">
-                    <div class="primary">
-                        Invested
-                    </div>
-
-                    <div class="value">
-                        €{{ number_format($totalInvested ?? 0, 2) }}
-                    </div>
-                </div>
-
-                <div class="list-row">
-                    <div class="primary">
-                        Avg. purchase price
-                    </div>
-
-                    <div class="value">
-                        €{{ number_format($avgPurchasePrice, 2) }}
-                    </div>
-                </div>
-
-                <div class="list-row">
-                    <div class="primary">
-                        Current price
-                    </div>
-
-                    <div class="value">
-                        €{{ number_format($asset->share_price, 2) }}
-                    </div>
-                </div>
-
-                <div class="list-row">
-
-                    <div class="primary">
-                        Unrealized gain
-                    </div>
-
-                    <div class="value {{ $unrealizedGain >= 0 ? 'positive' : 'negative' }}">
-
-                        {{ $unrealizedGain >= 0 ? '+' : '' }}
-                        €{{ number_format($unrealizedGain, 2) }}
-
-                    </div>
-
-                </div>
-
-
-                <!-- Trading buttons -->
-                <div style="
-                    display: flex;
-                    gap: 10px;
-                    margin-top: 18px;
-                ">
-
-                    @if($asset->status === 'active' && $asset->available_shares > 0)
-
-                        <a
-                            href="{{ route('trade.show', $asset->id) }}?side=buy"
-                            class="btn btn-gold btn-block"
-                        >
-                            Buy
-                        </a>
-
+                <div class="actions">
+                    @if($canBuy)
+                        <a href="{{ route('trade.show', $asset->id) }}?side=buy" class="btn btn-gold btn-block">Buy</a>
                     @else
-
-                        <button
-                            class="btn btn-gold btn-block"
-                            disabled
-                            style="opacity: 0.5; cursor: not-allowed;"
-                        >
-                            Unavailable
-                        </button>
-
+                        <button type="button" class="btn btn-gold btn-block" disabled>Unavailable</button>
                     @endif
-
 
                     @if($unitsOwned > 0)
-
-                        <a
-                            href="{{ route('listings.create', $asset->id) }}"
-                            class="btn btn-outline btn-block"
-                        >
-                            Sell
-                        </a>
-
+                        <a href="{{ route('listings.create', $asset->id) }}" class="btn btn-outline btn-block">Sell</a>
                     @else
-
-                        <button
-                            class="btn btn-outline btn-block"
-                            disabled
-                            style="opacity: 0.5; cursor: not-allowed;"
-                        >
-                            Sell
-                        </button>
-
+                        <button type="button" class="btn btn-outline btn-block" disabled>Sell</button>
                     @endif
-
                 </div>
-
             </div>
 
-
-            <!-- Availability -->
-            <div class="card">
-
-                <div class="section-title">
-                    Availability
-                </div>
-
+            <div class="side-block">
+                <div class="eyebrow">Availability</div>
                 @if($asset->available_shares > 0)
-
-                    <span class="badge positive"
-                          style="margin-bottom: 10px;">
-                        Available
-                    </span>
-
-                    <p class="muted"
-                       style="font-size: 0.85rem; margin: 0;">
-                        {{ number_format($asset->available_shares) }}
-                        shares are currently available.
-                    </p>
-
+                    <div style="margin-top:10px;"><span class="badge positive">Available</span></div>
+                    <p class="state"><span class="num">{{ number_format($asset->available_shares) }}</span> shares are currently available at {{ $fmt($asset->share_price) }} each.</p>
                 @else
-
-                    <span class="badge neutral"
-                          style="margin-bottom: 10px;">
-                        Fully allocated
-                    </span>
-
-                    <p class="muted"
-                       style="font-size: 0.85rem; margin: 0;">
-                        All shares of this opportunity have been allocated.
-                    </p>
-
+                    <div style="margin-top:10px;"><span class="badge neutral">Fully allocated</span></div>
+                    <p class="state">All shares have been allocated. Units may still appear on the secondary market.</p>
                 @endif
-
             </div>
 
-
-            <!-- Investment summary -->
-            <div class="card">
-
-                <div class="section-title">
-                    Investment summary
-                </div>
-
-                <div class="list-row">
-                    <div class="primary">
-                        Price per share
-                    </div>
-
-                    <div class="value">
-                        €{{ number_format($asset->share_price, 2) }}
-                    </div>
-                </div>
-
-                <div class="list-row">
-                    <div class="primary">
-                        Shares available
-                    </div>
-
-                    <div class="value">
-                        {{ number_format($asset->available_shares) }}
-                    </div>
-                </div>
-
-                <div class="list-row">
-                    <div class="primary">
-                        Asset valuation
-                    </div>
-
-                    <div class="value">
-                        €{{ number_format($asset->total_valuation, 2) }}
-                    </div>
-                </div>
-
-            </div>
-
-        </div>
-
+        </aside>
     </div>
-
+</div>
 @endsection
