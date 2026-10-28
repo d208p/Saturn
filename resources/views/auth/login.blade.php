@@ -311,7 +311,7 @@
                 <div class="field">
                     <div class="password-row">
                         <label for="password">Password</label>
-                        {{-- <a href="{{ route('password.request') }}" class="forgot-link">Forgot password?</a> --}}
+                        <a href="{{ route('password.request') }}" class="forgot-link">Forgot password?</a>
                     </div>
                     <input
                         type="password"

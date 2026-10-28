@@ -20,9 +20,18 @@ use App\Http\Controllers\WithdrawalController;
 use App\Http\Controllers\PortfolioController;
 use App\Http\Controllers\StripeWebhookController;
 use App\Http\Controllers\BuyoutController;
+use App\Http\Controllers\Auth\ForgotPasswordController;
+use App\Http\Controllers\Auth\EmailVerificationController;
 
 Route::get('/', function () {
     return view('welcome');
+});
+
+Route::middleware('guest')->group(function () {
+    Route::get('/forgot-password', [ForgotPasswordController::class, 'showLinkRequestForm'])->name('password.request');
+    Route::post('/forgot-password', [ForgotPasswordController::class, 'sendResetLinkEmail'])->name('password.email');
+    Route::get('/reset-password/{token}', [ForgotPasswordController::class, 'showResetForm'])->name('password.reset');
+    Route::post('/reset-password', [ForgotPasswordController::class, 'resetPassword'])->name('password.update');
 });
 
 // Preregistration routes
@@ -64,6 +73,13 @@ Route::middleware('auth')->group(function () {
     Route::get('/trade/{asset}', [TradeController::class, 'show'])->name('trade.show');
     Route::post('/trade/{asset}', [TradeController::class, 'store'])->name('trade.store');
     Route::get('/account', [AccountController::class, 'index'])->name('account.index');
+    Route::get('/email/verify', [EmailVerificationController::class, 'notice'])->name('verification.notice');
+    Route::get('/email/verify/{id}/{hash}', [EmailVerificationController::class, 'verify'])
+        ->middleware('signed')
+        ->name('verification.verify');
+    Route::post('/email/verification-notification', [EmailVerificationController::class, 'send'])
+        ->middleware('throttle:5,1')
+        ->name('verification.send');
     Route::put('/account/profile', [AccountController::class, 'updateProfile'])->name('account.profile');
     Route::put('/account/password', [AccountController::class, 'updatePassword'])->name('account.password');
     Route::get(
@@ -97,12 +113,15 @@ Route::middleware('auth')->group(function () {
         ->name('deposit.show');
     Route::post('/deposit/create-payment-intent', [DepositController::class, 'createPaymentIntent'])
         ->name('deposit.createPaymentIntent');
-    Route::get('/withdraw', [WithdrawalController::class, 'show'])->name('withdraw.show');
-    Route::post('/withdraw', [WithdrawalController::class, 'process'])->name('withdraw.process');
     Route::post('/buyout/{proposal}/vote', [BuyoutController::class, 'vote'])->name('buyout.vote');
     Route::get('/account/2fa/setup', [AccountController::class, 'showTwoFactorForm'])->name('account.2fa.setup');
     Route::post('/account/2fa/enable', [AccountController::class, 'enableTwoFactor'])->name('account.2fa.enable');
     Route::delete('/account/2fa/disable', [AccountController::class, 'disableTwoFactor'])->name('account.2fa.disable');
+
+    Route::middleware('verified')->group(function () {
+        Route::get('/withdraw', [WithdrawalController::class, 'show'])->name('withdraw.show');
+        Route::post('/withdraw', [WithdrawalController::class, 'process'])->name('withdraw.process');
+    });
 });
 
 Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {

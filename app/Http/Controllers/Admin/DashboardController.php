@@ -12,6 +12,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use App\Services\EmailService;
 
 class DashboardController extends Controller
 {
@@ -133,7 +134,7 @@ class DashboardController extends Controller
         return back()->with('success', "Buyout executed. Net proceeds of €" . number_format($netPayoutPool, 2) . " distributed to shareholders (1% fee logged).");
     }
 
-    public function distributeProfit(Request $request)
+    public function distributeProfit(Request $request, EmailService $emailService)
     {
         $request->validate([
             'asset_id'     => 'required|exists:assets,id',
@@ -161,7 +162,7 @@ class DashboardController extends Controller
             ->where('shares_owned', '>', 0)
             ->get();
 
-        DB::transaction(function () use ($holdings, $netPerShare, $taxPerShare, $asset, $taxPercentage) {
+        DB::transaction(function () use ($holdings, $netPerShare, $taxPerShare, $asset, $taxPercentage, $emailService) {
             $totalNetDistributed = 0;
             $totalTaxCollected = 0;
 
@@ -197,10 +198,24 @@ class DashboardController extends Controller
                     'amount'         => $userTaxAmount,
                     'fee_percentage' => $taxPercentage,
                 ]);
+
+                // 4. Send an email notification to each owner individually
+                $emailService->sendTransactionalEmail(
+                    $user,
+                    'Profit Distribution Received for ' . $asset->title,
+                    'emails.profit-distribution',
+                    [
+                        'userName'  => $user->name,
+                        'assetName' => $asset->title,
+                        'amount'    => $userNetProfit,
+                        'shares'    => $holding->shares_owned,
+                        'taxAmount' => $userTaxAmount
+                    ]
+                );
             }
         });
 
-        return back()->with('success', "Successfully distributed profits across shareholders of {$asset->title} with individual management tax records created.");
+        return back()->with('success', "Successfully distributed profits across shareholders of {$asset->title} with individual management tax records created and notification emails sent.");
     }
 
     public function storeAsset(Request $request)

@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use App\Models\BankAccount;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Laravel\Sanctum\HasApiTokens;
 
 #[Fillable([
@@ -21,7 +22,7 @@ use Laravel\Sanctum\HasApiTokens;
     'two_factor_secret', 'two_factor_recovery_codes', 'two_factor_confirmed_at',
 ])]
 #[Hidden(['password', 'remember_token', 'two_factor_secret', 'two_factor_recovery_codes',])]
-class User extends Authenticatable
+class User extends Authenticatable implements MustVerifyEmail
 {
     /** @use HasFactory<UserFactory> */
     use HasApiTokens, HasFactory, Notifiable;
