@@ -1,34 +1,59 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8">
-    <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #0d1117; color: #e6edf3; margin: 0; padding: 40px; }
-        .card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 32px; max-width: 500px; margin: 0 auto; }
-        .title { font-size: 20px; font-weight: 700; color: #f0f6fc; margin-bottom: 16px; }
-        .stat { font-size: 24px; font-weight: 700; color: #C6A15B; margin: 16px 0; }
-        .muted { color: #8b949e; font-size: 14px; line-height: 1.5; }
-        .footer { margin-top: 24px; font-size: 12px; color: #484f58; text-align: center; }
-    </style>
-</head>
-<body>
-    <div class="card">
-        <div class="title">Profit Distribution Received</div>
-        <p class="muted">Hello {{ $userName ?? 'Investor' }},</p>
-        <p class="muted">A new profit distribution has been successfully credited to your Saturn account for your holdings in <strong>{{ $assetName ?? 'Asset' }}</strong>.</p>
-        
-        <div class="stat">+€{{ number_format($amount ?? 0, 2) }}</div>
-        
-        <p class="muted">
-            <strong>Shares Held:</strong> {{ number_format($shares ?? 0) }}<br>
-            <strong>Management Tax Deducted:</strong> €{{ number_format($taxAmount ?? 0, 2) }} (12.1%)
-        </p>
-        
-        <p class="muted">You can view your updated balance and track your portfolio performance directly on your dashboard.</p>
-        
-        <div class="footer">
-            &copy; {{ date('Y') }} Saturn Platform. All rights reserved.
-        </div>
-    </div>
-</body>
-</html>
+@extends('emails.layout')
+
+@section('title', 'Profit distribution received')
+@section('preheader', 'A distribution of €' . number_format($amount ?? 0, 2) . ' from ' . ($assetName ?? 'your asset') . ' has been credited to your account.')
+
+@section('content')
+    <p style="margin:0 0 10px; font-size:11px; font-weight:700; letter-spacing:2px; text-transform:uppercase; color:#C6A15B;">Profit distribution</p>
+    <h1 style="margin:0 0 20px; font-size:26px; line-height:1.25; font-weight:700; letter-spacing:-0.4px; color:#F5F2EA;">Your distribution has arrived</h1>
+
+    <p style="margin:0 0 6px; color:#A7B0C0;">Hello {{ $userName ?? 'Investor' }},</p>
+    <p style="margin:0 0 30px; color:#A7B0C0;">
+        A new profit distribution from <strong style="color:#F5F2EA;">{{ $assetName ?? 'your asset' }}</strong>
+        has been credited to your Saturn account.
+    </p>
+
+    {{-- Amount --}}
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 30px;">
+        <tr>
+            <td align="center" bgcolor="#0B1220" style="background-color:#0B1220; border:1px solid #1D2A40; border-radius:12px; padding:30px 20px;">
+                <div style="font-size:11px; font-weight:700; letter-spacing:2px; text-transform:uppercase; color:#667085; margin-bottom:10px;">Amount credited</div>
+                <div class="hero-amount" style="font-size:46px; line-height:1.1; font-weight:300; letter-spacing:-1.5px; color:#C6A15B;">+€{{ number_format($amount ?? 0, 2) }}</div>
+            </td>
+        </tr>
+    </table>
+
+    {{-- Details --}}
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 32px;">
+        <tr>
+            <td style="padding:14px 0; border-top:1px solid #1D2A40; font-size:14px; color:#667085;">Asset</td>
+            <td align="right" style="padding:14px 0; border-top:1px solid #1D2A40; font-size:14px; font-weight:700; color:#F5F2EA;">{{ $assetName ?? 'Asset' }}</td>
+        </tr>
+        <tr>
+            <td style="padding:14px 0; border-top:1px solid #1D2A40; font-size:14px; color:#667085;">Shares held</td>
+            <td align="right" style="padding:14px 0; border-top:1px solid #1D2A40; font-size:14px; font-weight:700; color:#F5F2EA;">{{ number_format($shares ?? 0) }}</td>
+        </tr>
+        <tr>
+            {{-- Hardcoded: the 12.1% management tax rate is shown as text, as in the original template. --}}
+            <td style="padding:14px 0; border-top:1px solid #1D2A40; font-size:14px; color:#667085;">Management tax deducted (12.1%)</td>
+            <td align="right" style="padding:14px 0; border-top:1px solid #1D2A40; font-size:14px; font-weight:700; color:#F5F2EA;">€{{ number_format($taxAmount ?? 0, 2) }}</td>
+        </tr>
+        <tr>
+            <td style="padding:14px 0; border-top:1px solid #1D2A40; border-bottom:1px solid #1D2A40; font-size:14px; color:#667085;">Date</td>
+            <td align="right" style="padding:14px 0; border-top:1px solid #1D2A40; border-bottom:1px solid #1D2A40; font-size:14px; font-weight:700; color:#F5F2EA;">{{ ($date ?? now())->format('F j, Y') }}</td>
+        </tr>
+    </table>
+
+    {{-- Button --}}
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 30px;">
+        <tr>
+            <td class="btn-cell" align="center" bgcolor="#C6A15B" style="background-color:#C6A15B; border-radius:10px;">
+                <a href="{{ $dashboardUrl ?? url('/dashboard') }}" style="display:inline-block; padding:14px 34px; font-family:'Manrope','Segoe UI',Helvetica,Arial,sans-serif; font-size:15px; font-weight:700; color:#0B1220; text-decoration:none; border-radius:10px;">View your dashboard</a>
+            </td>
+        </tr>
+    </table>
+
+    <p style="margin:0; font-size:13px; color:#667085;">
+        Your updated balance and full distribution history are available in your account under Income.
+    </p>
+@endsection

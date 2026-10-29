@@ -13,6 +13,9 @@ class AssetController extends Controller
     {
         $user = Auth::user();
 
+        // Check if the asset is in the user's watchlist
+        $isWatched = $user ? $asset->watchlists()->where('user_id', $user->id)->exists() : false;
+
         // User's holding in this asset
         $holding = Holding::where('user_id', $user->id)
             ->where('asset_id', $asset->id)
@@ -21,7 +24,6 @@ class AssetController extends Controller
         // Position calculations
         $unitsOwned = $holding?->shares_owned ?? 0;
         $totalInvested = $holding?->total_invested ?? 0;
-
         $currentValue = $unitsOwned * $asset->share_price;
 
         $avgPurchasePrice = $unitsOwned > 0
@@ -30,7 +32,6 @@ class AssetController extends Controller
 
         $unrealizedGain = $currentValue - $totalInvested;
 
-        // Recent distributions
         $distributions = Transaction::where('asset_id', $asset->id)
             ->where('type', 'distribution')
             ->where('status', 'completed')
@@ -44,7 +45,28 @@ class AssetController extends Controller
             'currentValue',
             'avgPurchasePrice',
             'unrealizedGain',
-            'distributions'
+            'distributions',
+            'isWatched' // <-- Pass to view
         ));
+    }
+
+    public function toggleWatch(Asset $asset)
+    {
+        $user = Auth::user();
+        $watchlistEntry = $asset->watchlists()->where('user_id', $user->id)->first();
+
+        if ($watchlistEntry) {
+            $watchlistEntry->delete();
+            $status = 'removed';
+        } else {
+            $asset->watchlists()->create(['user_id' => $user->id]);
+            $status = 'added';
+        }
+
+        if (request()->expectsJson()) {
+            return response()->json(['status' => $status]);
+        }
+
+        return back();
     }
 }

@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
@@ -10,8 +11,10 @@ class Asset extends Model
         'title',
         'category',
         'country',
-        'image',
+        'images',
         'description',
+        'development_exposure',
+        'market_liquidity',
         'total_valuation',
         'total_shares',
         'available_shares',
@@ -19,9 +22,18 @@ class Asset extends Model
         'status',
     ];
 
+    protected $casts = [
+        'images' => 'array',
+    ];
+
     public function holdings()
     {
         return $this->hasMany(Holding::class);
+    }
+
+    public function watchlists()
+    {
+        return $this->hasMany(Watchlist::class);
     }
 
     public function transactions()

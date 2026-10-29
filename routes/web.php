@@ -32,26 +32,19 @@ Route::middleware('guest')->group(function () {
     Route::post('/forgot-password', [ForgotPasswordController::class, 'sendResetLinkEmail'])->name('password.email');
     Route::get('/reset-password/{token}', [ForgotPasswordController::class, 'showResetForm'])->name('password.reset');
     Route::post('/reset-password', [ForgotPasswordController::class, 'resetPassword'])->name('password.update');
+    Route::get('/preregister', [PreregisterController::class, 'create'])->name('preregister');
+    Route::post('/preregister', [PreregisterController::class, 'store'])->name('preregister.store');
+    Route::get('/login', function () {
+        return view('auth.login');
+    })->name('login');
+    Route::post('/login', [AuthenticatedSessionController::class, 'store']);
+    Route::get('/two-factor-challenge', fn () => view('auth.two-factor-challenge'))->name('two-factor.login');
+    Route::post('/two-factor-challenge', [AuthenticatedSessionController::class, 'verifyTwoFactor']);
+    Route::get('/register', function () {
+        return view('auth.register');
+    })->name('register');
+    Route::post('/register', [RegisteredUserController::class, 'store']);
 });
-
-// Preregistration routes
-Route::get('/preregister', [PreregisterController::class, 'create'])->name('preregister');
-Route::post('/preregister', [PreregisterController::class, 'store'])->name('preregister.store');
-
-// Authentication routes
-Route::get('/login', function () {
-    return view('auth.login');
-})->name('login');
-
-Route::post('/login', [AuthenticatedSessionController::class, 'store']);
-Route::get('/two-factor-challenge', fn () => view('auth.two-factor-challenge'))->name('two-factor.login');
-Route::post('/two-factor-challenge', [AuthenticatedSessionController::class, 'verifyTwoFactor']);
-
-Route::get('/register', function () {
-    return view('auth.register');
-})->name('register');
-
-Route::post('/register', [RegisteredUserController::class, 'store']);
 
 Route::post(
     '/stripe/webhook',
@@ -68,6 +61,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/market', [MarketController::class, 'index'])->name('market');
     Route::get('/asset/{asset}', [AssetController::class, 'show'])->name('asset.show');
+    Route::post('/asset/{asset}/watch', [AssetController::class, 'toggleWatch'])->name('asset.watch');
     Route::get('/income', [IncomeController::class, 'index'])->name('income');
     Route::get('/activity', [ActivityController::class, 'index'])->name('activity');
     Route::get('/trade/{asset}', [TradeController::class, 'show'])->name('trade.show');
@@ -126,6 +120,10 @@ Route::middleware('auth')->group(function () {
 
 Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/', [AdminDashboardController::class, 'index'])->name('dashboard');
+
+    Route::get('/assets/{asset}/edit', [AdminDashboardController::class, 'editAsset'])->name('assets.edit');
+    Route::put('/assets/{asset}', [AdminDashboardController::class, 'updateAsset'])->name('assets.update');
+    
     Route::post('/assets', [AdminDashboardController::class, 'storeAsset'])->name('assets.store');
     Route::post('/assets/distribute', [AdminDashboardController::class, 'distributeProfit'])->name('assets.distribute');
     Route::post('/buyouts/create', [AdminDashboardController::class, 'createBuyoutProposal'])->name('buyout.create');

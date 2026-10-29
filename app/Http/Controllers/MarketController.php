@@ -42,7 +42,9 @@ class MarketController extends Controller
             ->get();
 
         // 4. Watchlist
-        $watchlist = collect();
+        $watchlist = Asset::whereHas('watchlists', function ($query) use ($userId) {
+            $query->where('user_id', $userId);
+        })->get();
 
         return view('dashboard.market', compact(
             'newProjects',

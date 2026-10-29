@@ -219,28 +219,34 @@ class DashboardController extends Controller
     }
 
     public function storeAsset(Request $request)
-    {
-        $validated = $request->validate([
-            'title'           => 'required|string|max:255',
-            'category'        => 'required|string|max:255',
-            'country'         => 'required|string|max:255',
-            'description'     => 'nullable|string',
-            'total_valuation' => 'required|numeric|min:0',
-            'total_shares'    => 'required|integer|min:1',
-            'share_price'     => 'required|numeric|min:0',
-            'image'           => 'required|image|mimes:jpeg,png,jpg,webp|max:10240',
-        ]);
+{
+    $validated = $request->validate([
+        'title'               => 'required|string|max:255',
+        'category'            => 'required|string|max:255',
+        'country'             => 'required|string|max:255',
+        'description'         => 'nullable|string',
+        'total_valuation'     => 'required|numeric|min:0',
+        'total_shares'        => 'required|integer|min:1',
+        'share_price'         => 'required|numeric|min:0',
+        'images'              => 'required|array|min:1', // Ensure at least one image
+        'images.*'            => 'image|mimes:jpeg,png,jpg,webp|max:10240', // Validate each file
+    ]);
 
-        $validated['image_path'] = $request->file('image')->store('assets', 'public');
-        unset($validated['image']);
-
-        $validated['available_shares'] = $validated['total_shares'];
-        $validated['status'] = 'active';
-
-        Asset::create($validated);
-
-        return back()->with('success', 'New asset created successfully.');
+    $imagePaths = [];
+    if ($request->hasFile('images')) {
+        foreach ($request->file('images') as $image) {
+            $imagePaths[] = $image->store('assets', 'public');
+        }
     }
+
+    $validated['images'] = $imagePaths;
+    $validated['available_shares'] = $validated['total_shares'];
+    $validated['status'] = 'active';
+
+    Asset::create($validated);
+
+    return back()->with('success', 'New asset created with image gallery successfully.');
+}
 
     /**
      * Terminate an active asset, refund shareholders (investment + 4.9% primary fee),
@@ -298,4 +304,57 @@ class DashboardController extends Controller
 
         return back()->with('success', "Terminated asset '{$asset->title}'. All shareholders have been refunded their principal plus the 4.9% primary fee, and fee records have been purged.");
     }
+
+    /**
+ * Show the dedicated admin detail and edit page for an asset.
+ */
+public function editAsset(Asset $asset)
+{
+    // Load holdings and statistics specific to this asset
+    $totalShareholders = Holding::where('asset_id', $asset->id)
+        ->where('shares_owned', '>', 0)
+        ->count();
+
+    $circulatingShares = $asset->total_shares - $asset->available_shares;
+
+    return view('admin.edit', compact('asset', 'totalShareholders', 'circulatingShares'));
+}
+
+/**
+ * Update the specified asset in the database.
+ */
+public function updateAsset(Request $request, Asset $asset)
+{
+    $validated = $request->validate([
+        'title'               => 'required|string|max:255',
+        'category'            => 'required|string|max:255',
+        'country'             => 'required|string|max:255',
+        'description'         => 'nullable|string',
+        'total_valuation'     => 'required|numeric|min:0',
+        'share_price'         => 'required|numeric|min:0',
+        'development_exposure'=> 'nullable|numeric|min:0|max:100',
+        'market_liquidity'    => 'required|string|max:255',
+        'status'              => 'required|in:draft,active,funded,closed',
+        'images'              => 'nullable|array',
+        'images.*'            => 'image|mimes:jpeg,png,jpg,webp|max:10240',
+    ]);
+
+    // If new images are uploaded, append or replace them
+    if ($request->hasFile('images')) {
+        $newPaths = [];
+        foreach ($request->file('images') as $image) {
+            $newPaths[] = $image->store('assets', 'public');
+        }
+
+        // Merge with existing images if selected, or replace
+        $existing = $asset->images ?? [];
+        $validated['images'] = array_merge($existing, $newPaths);
+    } else {
+        unset($validated['images']);
+    }
+
+    $asset->update($validated);
+
+    return back()->with('success', 'Asset details updated successfully.');
+}
 }

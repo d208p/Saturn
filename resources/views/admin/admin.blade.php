@@ -252,15 +252,10 @@
             >
         </div>
 
-        <div>
-            <label>Place Image</label>
-            <input
-                type="file"
-                name="image"
-                accept="image/jpeg,image/png,image/webp"
-                required
-                style="width: 100%; padding: 8px;"
-            >
+        <div class="field">
+            <label for="images">Asset Images (Select multiple)</label>
+            <input type="file" name="images[]" id="images" multiple accept="image/png, image/jpeg, image/webp" required>
+            <p class="field-hint">You can select multiple photos to feature in the asset gallery carousel.</p>
         </div>
 
         <div>
@@ -339,6 +334,7 @@
                             </span>
                         </td>
                         <td>
+                            <a href="{{ route('admin.assets.edit', $asset->id) }}" style="color: var(--gold); font-weight: 600; font-size: 0.85rem; margin-right: 12px;">Edit Details</a>
                             @if($asset->status === 'active')
                                 <form action="{{ route('admin.assets.endTerm', $asset->id) }}" method="POST" onsubmit="return confirm('Are you sure you want to terminate this opportunity? All shareholders will be refunded at €{{ number_format($asset->share_price, 2) }}/share.');">
                                     @csrf
