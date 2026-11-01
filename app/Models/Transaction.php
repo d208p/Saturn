@@ -13,6 +13,7 @@ class Transaction extends Model
         'amount',
         'shares',
         'status',
+        'reference',
         'stripe_transfer_id',
         'stripe_payout_id',
     ];

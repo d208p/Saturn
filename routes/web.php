@@ -51,22 +51,11 @@ Route::post(
     [StripeWebhookController::class, 'handle']
 )->name('stripe.webhook');
 
-Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])
-    ->middleware('auth')
-    ->name('logout');
-
 // Authenticated group
 Route::middleware('auth')->group(function () {
-    Route::get('/portfolio', [PortfolioController::class, 'index'])->name('portfolio');
-    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
-    Route::get('/market', [MarketController::class, 'index'])->name('market');
-    Route::get('/asset/{asset}', [AssetController::class, 'show'])->name('asset.show');
-    Route::post('/asset/{asset}/watch', [AssetController::class, 'toggleWatch'])->name('asset.watch');
-    Route::get('/income', [IncomeController::class, 'index'])->name('income');
-    Route::get('/activity', [ActivityController::class, 'index'])->name('activity');
-    Route::get('/trade/{asset}', [TradeController::class, 'show'])->name('trade.show');
-    Route::post('/trade/{asset}', [TradeController::class, 'store'])->name('trade.store');
-    Route::get('/account', [AccountController::class, 'index'])->name('account.index');
+    
+    // Authentication & Verification Management (Must remain open to unverified users)
+    Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
     Route::get('/email/verify', [EmailVerificationController::class, 'notice'])->name('verification.notice');
     Route::get('/email/verify/{id}/{hash}', [EmailVerificationController::class, 'verify'])
         ->middleware('signed')
@@ -74,47 +63,58 @@ Route::middleware('auth')->group(function () {
     Route::post('/email/verification-notification', [EmailVerificationController::class, 'send'])
         ->middleware('throttle:5,1')
         ->name('verification.send');
+
+    // General Account & Dashboard
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/account', [AccountController::class, 'index'])->name('account.index');
     Route::put('/account/profile', [AccountController::class, 'updateProfile'])->name('account.profile');
     Route::put('/account/password', [AccountController::class, 'updatePassword'])->name('account.password');
-    Route::get(
-        '/account/stripe/onboarding',
-        [AccountController::class, 'startStripeOnboarding']
-    )->name('account.stripe.onboarding');
-
-    Route::get(
-        '/account/stripe/return',
-        [AccountController::class, 'stripeOnboardingReturn']
-    )->name('account.stripe.return');
-
-    Route::get(
-        '/account/stripe/refresh',
-        [AccountController::class, 'stripeOnboardingRefresh']
-    )->name('account.stripe.refresh');
-
-    Route::get('/account/identity/start', [
-        AccountController::class,
-        'startIdentityVerification'
-    ])->name('account.identity.start');
-
-    Route::post('/account/accreditation', [AccountController::class, 'requestAccreditation'])->name('account.accreditation');
     Route::delete('/account/session/{id}', [AccountController::class, 'logoutSession'])->name('account.session.destroy');
-    Route::get('/secondary/asset/{asset}', [SecondaryMarketController::class, 'showAssetListings'])->name('secondary.asset.show');
-    Route::post('/secondary/asset/{asset}/buy', [SecondaryMarketController::class, 'buyFromMarket'])->name('secondary.asset.buy');
-    Route::get('/listings/create/{asset}', [ListingController::class, 'create'])->name('listings.create');
-    Route::post('/listings/store/{asset}', [ListingController::class, 'store'])->name('listings.store');
-    Route::post('/listings/{sellOrder}/cancel', [ListingController::class, 'cancel'])->name('listings.cancel');
-    Route::get('/deposit', [DepositController::class, 'show'])
-        ->name('deposit.show');
-    Route::post('/deposit/create-payment-intent', [DepositController::class, 'createPaymentIntent'])
-        ->name('deposit.createPaymentIntent');
-    Route::post('/buyout/{proposal}/vote', [BuyoutController::class, 'vote'])->name('buyout.vote');
-    Route::get('/account/2fa/setup', [AccountController::class, 'showTwoFactorForm'])->name('account.2fa.setup');
-    Route::post('/account/2fa/enable', [AccountController::class, 'enableTwoFactor'])->name('account.2fa.enable');
-    Route::delete('/account/2fa/disable', [AccountController::class, 'disableTwoFactor'])->name('account.2fa.disable');
 
+    Route::get('/market', [MarketController::class, 'index'])->name('market');
+    Route::get('/asset/{asset}', [AssetController::class, 'show'])->name('asset.show');
+    Route::post('/asset/{asset}/watch', [AssetController::class, 'toggleWatch'])->name('asset.watch');
+
+    // Portfolio & Financial Tracking
+    Route::get('/portfolio', [PortfolioController::class, 'index'])->name('portfolio');
+    Route::get('/income', [IncomeController::class, 'index'])->name('income');
+    Route::get('/activity', [ActivityController::class, 'index'])->name('activity');
+
+    // ==========================================
+    // 🔒 VERIFIED-ONLY FINANCIAL & TRADING GROUP
+    // ==========================================
     Route::middleware('verified')->group(function () {
+        // Primary Market Trading
+        Route::get('/trade/{asset}', [TradeController::class, 'show'])->name('trade.show');
+        Route::post('/trade/{asset}', [TradeController::class, 'store'])->name('trade.store');
+
+        // Secondary Market & Peer Listings
+        Route::get('/secondary/asset/{asset}', [SecondaryMarketController::class, 'showAssetListings'])->name('secondary.asset.show');
+        Route::post('/secondary/asset/{asset}/buy', [SecondaryMarketController::class, 'buyFromMarket'])->name('secondary.asset.buy');
+        Route::get('/listings/create/{asset}', [ListingController::class, 'create'])->name('listings.create');
+        Route::post('/listings/store/{asset}', [ListingController::class, 'store'])->name('listings.store');
+        Route::post('/listings/{sellOrder}/cancel', [ListingController::class, 'cancel'])->name('listings.cancel');
+
+        // Deposits & Withdrawals
+        Route::get('/deposit', [DepositController::class, 'show'])->name('deposit.show');
+        Route::post('/deposit/create-payment-intent', [DepositController::class, 'createPaymentIntent'])->name('deposit.createPaymentIntent');
         Route::get('/withdraw', [WithdrawalController::class, 'show'])->name('withdraw.show');
         Route::post('/withdraw', [WithdrawalController::class, 'process'])->name('withdraw.process');
+
+        // Corporate Buyouts (Voting)
+        Route::post('/buyout/{proposal}/vote', [BuyoutController::class, 'vote'])->name('buyout.vote');
+
+        // Stripe Onboarding, Identity, & Accreditation
+        Route::get('/account/stripe/onboarding', [AccountController::class, 'startStripeOnboarding'])->name('account.stripe.onboarding');
+        Route::get('/account/stripe/return', [AccountController::class, 'stripeOnboardingReturn'])->name('account.stripe.return');
+        Route::get('/account/stripe/refresh', [AccountController::class, 'stripeOnboardingRefresh'])->name('account.stripe.refresh');
+        Route::get('/account/identity/start', [AccountController::class, 'startIdentityVerification'])->name('account.identity.start');
+        Route::post('/account/accreditation', [AccountController::class, 'requestAccreditation'])->name('account.accreditation');
+
+        // Two-Factor Security Settings
+        Route::get('/account/2fa/setup', [AccountController::class, 'showTwoFactorForm'])->name('account.2fa.setup');
+        Route::post('/account/2fa/enable', [AccountController::class, 'enableTwoFactor'])->name('account.2fa.enable');
+        Route::delete('/account/2fa/disable', [AccountController::class, 'disableTwoFactor'])->name('account.2fa.disable');
     });
 });
 

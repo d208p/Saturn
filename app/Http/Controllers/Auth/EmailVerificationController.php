@@ -7,15 +7,19 @@ use App\Models\User;
 use App\Services\EmailService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\URL;
+use Illuminate\Auth\Events\Verified;
 
 class EmailVerificationController extends Controller
 {
     /**
      * Show a notice telling the user to check their email.
      */
-    public function notice()
+    public function notice(Request $request)
     {
-        return view('auth.verify-email');
+        // Redirect already-verified users straight to the dashboard
+        return $request->user()->hasVerifiedEmail()
+            ? redirect()->intended('/dashboard')
+            : view('auth.verify-email');
     }
 
     /**
@@ -58,16 +62,13 @@ class EmailVerificationController extends Controller
             abort(403, 'Invalid verification link.');
         }
 
-        if (!validator(['id' => $id, 'hash' => $hash], [])->validate() && !$request->hasValidSignature()) {
-            abort(403, 'This verification link has expired.');
-        }
-
         if ($user->hasVerifiedEmail()) {
             return redirect()->intended('/dashboard?verified=1');
         }
 
-        // Update the timestamp column!
-        $user->markEmailAsVerified();
+        if ($user->markEmailAsVerified()) {
+            event(new Verified($user));
+        }
 
         return redirect()->intended('/dashboard?verified=1');
     }
