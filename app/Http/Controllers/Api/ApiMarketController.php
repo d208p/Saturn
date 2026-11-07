@@ -13,35 +13,41 @@ class ApiMarketController extends Controller
     {
         $userId = $request->user()->id;
 
-        // 1. Primary Market Projects
+        // 1. Primary Market: New projects available for funding
         $newProjects = Asset::where('status', 'active')
             ->latest()
             ->get();
 
-        // 2. Secondary Market Assets
+        // 2. Secondary Market: Assets with active listings from other users
         $secondaryAssets = Asset::whereHas('sellOrders', function ($query) use ($userId) {
                 $query->where('status', 'active')
-                      ->where('user_id', '!=', $userId);
+                    ->where('user_id', '!=', $userId);
             })
             ->withCount(['sellOrders as active_listings_count' => function ($query) use ($userId) {
-                $query->where('status', 'active')->where('user_id', '!=', $userId);
+                $query->where('status', 'active')
+                    ->where('user_id', '!=', $userId);
             }])
             ->withSum(['sellOrders as total_secondary_shares' => function ($query) use ($userId) {
-                $query->where('status', 'active')->where('user_id', '!=', $userId);
+                $query->where('status', 'active')
+                    ->where('user_id', '!=', $userId);
             }], 'shares')
             ->withMin(['sellOrders as min_price' => function ($query) use ($userId) {
-                $query->where('status', 'active')->where('user_id', '!=', $userId);
+                $query->where('status', 'active')
+                    ->where('user_id', '!=', $userId);
             }], 'price_per_share')
             ->get();
 
-        // 3. User Listings
+        // 3. User Listings: All sell orders belonging to the authenticated user
         $userListings = SellOrder::with('asset')
             ->where('user_id', $userId)
             ->latest()
             ->get();
 
-        // 4. Watchlist (placeholder collect or relationship)
-        $watchlist = collect();
+        // 4. Watchlist: Assets saved by the authenticated user
+        $watchlist = Asset::whereHas('watchlists', function ($query) use ($userId) {
+                $query->where('user_id', $userId);
+            })
+            ->get();
 
         return response()->json([
             'new_projects' => $newProjects,
